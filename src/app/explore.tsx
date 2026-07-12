@@ -1,180 +1,304 @@
-import { Image } from 'expo-image';
-import { SymbolView } from 'expo-symbols';
-import { Platform, Pressable, ScrollView, StyleSheet } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from "react-native";
 
-import { ExternalLink } from '@/components/external-link';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Collapsible } from '@/components/ui/collapsible';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
+import { BakeryColors } from "@/constants/theme";
 
-export default function TabTwoScreen() {
-  const safeAreaInsets = useSafeAreaInsets();
-  const insets = {
-    ...safeAreaInsets,
-    bottom: safeAreaInsets.bottom + BottomTabInset + Spacing.three,
-  };
-  const theme = useTheme();
-
-  const contentPlatformStyle = Platform.select({
-    android: {
-      paddingTop: insets.top,
-      paddingLeft: insets.left,
-      paddingRight: insets.right,
-      paddingBottom: insets.bottom,
-    },
-    web: {
-      paddingTop: Spacing.six,
-      paddingBottom: Spacing.four,
-    },
-  });
-
+export default function ProductHeader() {
   return (
-    <ScrollView
-      style={[styles.scrollView, { backgroundColor: theme.background }]}
-      contentInset={insets}
-      contentContainerStyle={[styles.contentContainer, contentPlatformStyle]}>
-      <ThemedView style={styles.container}>
-        <ThemedView style={styles.titleContainer}>
-          <ThemedText type="subtitle">Explore</ThemedText>
-          <ThemedText style={styles.centerText} themeColor="textSecondary">
-            This starter app includes example{'\n'}code to help you get started.
-          </ThemedText>
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor={BakeryColors.background} />
 
-          <ExternalLink href="https://docs.expo.dev" asChild>
-            <Pressable style={({ pressed }) => pressed && styles.pressed}>
-              <ThemedView type="backgroundElement" style={styles.linkButton}>
-                <ThemedText type="link">Expo documentation</ThemedText>
-                <SymbolView
-                  tintColor={theme.text}
-                  name={{ ios: 'arrow.up.right.square', android: 'link', web: 'link' }}
-                  size={12}
-                />
-              </ThemedView>
-            </Pressable>
-          </ExternalLink>
-        </ThemedView>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.menuButton}>
+          <Text style={styles.menuIcon}>☰</Text>
+        </TouchableOpacity>
+        <View style={styles.titleWrap}>
+          <Text style={styles.headerEyebrow}>Bakery Shop</Text>
+          <Text style={styles.headerTitle}>Bakery Stock</Text>
+        </View>
+        <TouchableOpacity style={styles.profileButton}>
+          <Text style={styles.profileIcon}>👤</Text>
+        </TouchableOpacity>
+      </View>
 
-        <ThemedView style={styles.sectionsWrapper}>
-          <Collapsible title="File-based routing">
-            <ThemedText type="small">
-              This app has two screens: <ThemedText type="code">src/app/index.tsx</ThemedText> and{' '}
-              <ThemedText type="code">src/app/explore.tsx</ThemedText>
-            </ThemedText>
-            <ThemedText type="small">
-              The layout file in <ThemedText type="code">src/app/_layout.tsx</ThemedText> sets up
-              the tab navigator.
-            </ThemedText>
-            <ExternalLink href="https://docs.expo.dev/router/introduction">
-              <ThemedText type="linkPrimary">Learn more</ThemedText>
-            </ExternalLink>
-          </Collapsible>
+      {/* Search and Filter */}
+      <View style={styles.searchContainer}>
+        <View style={styles.searchBar}>
+          <Text style={styles.searchIcon}>🔍</Text>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search pastries, categories..."
+            placeholderTextColor={BakeryColors.textSecondary}
+            editable={true}
+          />
+        </View>
+        <TouchableOpacity style={styles.filterButton}>
+          <Text style={styles.filterIcon}>Filter🔻</Text>
+        </TouchableOpacity>
+      </View>
 
-          <Collapsible title="Android, iOS, and web support">
-            <ThemedView type="backgroundElement" style={styles.collapsibleContent}>
-              <ThemedText type="small">
-                You can open this project on Android, iOS, and the web. To open the web version,
-                press <ThemedText type="smallBold">w</ThemedText> in the terminal running this
-                project.
-              </ThemedText>
-              <Image
-                source={require('@/assets/images/tutorial-web.png')}
-                style={styles.imageTutorial}
-              />
-            </ThemedView>
-          </Collapsible>
+      <View style={styles.addRow}>
+        <TouchableOpacity style={styles.addButton}>
+          <Text style={styles.addButtonIcon}>＋</Text>
+          <Text style={styles.addButtonText}>Add New Pastry</Text>
+        </TouchableOpacity>
+      </View>
 
-          <Collapsible title="Images">
-            <ThemedText type="small">
-              For static images, you can use the <ThemedText type="code">@2x</ThemedText> and{' '}
-              <ThemedText type="code">@3x</ThemedText> suffixes to provide files for different
-              screen densities.
-            </ThemedText>
-            <Image source={require('@/assets/images/react-logo.png')} style={styles.imageReact} />
-            <ExternalLink href="https://reactnative.dev/docs/images">
-              <ThemedText type="linkPrimary">Learn more</ThemedText>
-            </ExternalLink>
-          </Collapsible>
+      {/* Main Content Area (For layout buffer) */}
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={styles.shelfArea}
+      >
+        {/* You can add product items here */}
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyIcon}>🧁</Text>
+          <Text style={styles.emptyTitle}>The pastry shelf is still empty</Text>
+          <Text style={styles.emptySubtitle}>
+            Start adding your first pastry now
+          </Text>
+        </View>
+      </ScrollView>
 
-          <Collapsible title="Light and dark mode components">
-            <ThemedText type="small">
-              This template has light and dark mode support. The{' '}
-              <ThemedText type="code">useColorScheme()</ThemedText> hook lets you inspect what the
-              user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-            </ThemedText>
-            <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-              <ThemedText type="linkPrimary">Learn more</ThemedText>
-            </ExternalLink>
-          </Collapsible>
+      {/* Bottom Navigation */}
+      <View style={styles.bottomNav}>
+        <TouchableOpacity style={styles.navItem}>
+          <Text style={styles.navIcon}>🏠</Text>
+          <Text style={styles.navText}>Home</Text>
+        </TouchableOpacity>
 
-          <Collapsible title="Animations">
-            <ThemedText type="small">
-              This template includes an example of an animated component. The{' '}
-              <ThemedText type="code">src/components/ui/collapsible.tsx</ThemedText> component uses
-              the powerful <ThemedText type="code">react-native-reanimated</ThemedText> library to
-              animate opening this hint.
-            </ThemedText>
-          </Collapsible>
-        </ThemedView>
-        {Platform.OS === 'web' && <WebBadge />}
-      </ThemedView>
-    </ScrollView>
+        <TouchableOpacity style={styles.navItem}>
+          <Text style={styles.navIcon}>➕</Text>
+          <Text style={styles.navText}>Add</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.navItemActive}>
+          <View style={styles.navActivePill}>
+            <Text style={styles.navIconActive}>🧁</Text>
+          </View>
+          <Text style={styles.navTextActive}>Pastries</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.navItem}>
+          <Text style={styles.navIcon}>🗂️</Text>
+          <Text style={styles.navText}>Categories</Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
   );
 }
 
+// ---- Cute Minimal Bakery palette (see BakeryColors in constants/theme.ts) ----
+// Background cream : BakeryColors.background (#FFF8F3)
+// Card white       : BakeryColors.surface   (#FFFFFF)
+// Frosting pink    : BakeryColors.primary   (#F2A6B8)
+// Pink pressed     : BakeryColors.primaryDark (#E27F98)
+// Caramel accent   : BakeryColors.secondary (#C98B5E)
+// Soft peach border: BakeryColors.border    (#F6E1D3)
+// Text cocoa       : BakeryColors.textPrimary (#5B4636)
+// Muted mocha      : BakeryColors.textSecondary (#B29A8B)
+
 const styles = StyleSheet.create({
-  scrollView: {
-    flex: 1,
-  },
-  contentContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
   container: {
-    maxWidth: MaxContentWidth,
-    flexGrow: 1,
+    flex: 1,
+    backgroundColor: BakeryColors.background,
   },
-  titleContainer: {
-    gap: Spacing.three,
-    alignItems: 'center',
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.six,
+  header: {
+    paddingVertical: 14,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    backgroundColor: BakeryColors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: BakeryColors.border,
   },
-  centerText: {
-    textAlign: 'center',
+  menuButton: {
+    width: 34,
+    height: 34,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  pressed: {
+  menuIcon: {
+    fontSize: 18,
+    color: BakeryColors.primaryDark,
+  },
+  titleWrap: {
+    alignItems: "center",
+  },
+  headerEyebrow: {
+    fontSize: 11,
+    color: BakeryColors.secondary,
+    letterSpacing: 1,
+    marginBottom: 2,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: BakeryColors.textPrimary,
+  },
+  profileButton: {
+    width: 34,
+    height: 34,
+    backgroundColor: BakeryColors.primary,
+    borderRadius: 17,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  profileIcon: {
+    fontSize: 16,
+    color: BakeryColors.surface,
+  },
+  searchContainer: {
+    flexDirection: "row",
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 10,
+    gap: 12,
+    alignItems: "center",
+  },
+  searchBar: {
+    flex: 1,
+    flexDirection: "row",
+    backgroundColor: BakeryColors.surface,
+    borderWidth: 1,
+    borderColor: BakeryColors.border,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    alignItems: "center",
+    height: 52,
+  },
+  searchIcon: {
+    fontSize: 15,
+    marginRight: 8,
     opacity: 0.7,
   },
-  linkButton: {
-    flexDirection: 'row',
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.two,
-    borderRadius: Spacing.five,
-    justifyContent: 'center',
-    gap: Spacing.one,
-    alignItems: 'center',
+  searchInput: {
+    flex: 1,
+    height: "100%",
+    fontSize: 14,
+    color: BakeryColors.textPrimary,
+    paddingVertical: 0,
   },
-  sectionsWrapper: {
-    gap: Spacing.five,
-    paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.three,
+  filterButton: {
+    minWidth: 58,
+    height: 52,
+    paddingHorizontal: 14,
+    backgroundColor: BakeryColors.surface,
+    borderWidth: 1,
+    borderColor: BakeryColors.border,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  collapsibleContent: {
-    alignItems: 'center',
+  filterIcon: {
+    color: BakeryColors.primaryDark,
+    fontSize: 18,
+    fontWeight: "700",
   },
-  imageTutorial: {
-    width: '100%',
-    aspectRatio: 296 / 171,
-    borderRadius: Spacing.three,
-    marginTop: Spacing.two,
+  addRow: {
+    paddingHorizontal: 16,
+    paddingTop: 6,
+    paddingBottom: 16,
   },
-  imageReact: {
-    width: 100,
-    height: 100,
-    alignSelf: 'center',
+  addButton: {
+    backgroundColor: BakeryColors.primary,
+    height: 48,
+    borderRadius: 16,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 6,
+    shadowColor: BakeryColors.primaryDark,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  addButtonIcon: {
+    color: BakeryColors.surface,
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  addButtonText: {
+    color: BakeryColors.surface,
+    fontWeight: "600",
+    fontSize: 14,
+  },
+  shelfArea: {
+    flexGrow: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 40,
+  },
+  emptyState: {
+    alignItems: "center",
+    paddingVertical: 40,
+  },
+  emptyIcon: {
+    fontSize: 40,
+    marginBottom: 12,
+    opacity: 0.7,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: BakeryColors.primaryDark,
+    marginBottom: 4,
+  },
+  emptySubtitle: {
+    fontSize: 13,
+    color: BakeryColors.textSecondary,
+    textAlign: "center",
+  },
+  bottomNav: {
+    flexDirection: "row",
+    backgroundColor: BakeryColors.surface,
+    borderTopWidth: 1,
+    borderTopColor: BakeryColors.border,
+    paddingVertical: 10,
+    paddingBottom: 14,
+  },
+  navItem: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  navItemActive: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  navActivePill: {
+    backgroundColor: BakeryColors.chip,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 4,
+    marginBottom: 4,
+  },
+  navIcon: {
+    fontSize: 20,
+    marginBottom: 4,
+    opacity: 0.55,
+  },
+  navIconActive: {
+    fontSize: 18,
+  },
+  navText: {
+    fontSize: 11,
+    color: BakeryColors.textSecondary,
+  },
+  navTextActive: {
+    fontSize: 11,
+    color: BakeryColors.primaryDark,
+    fontWeight: "700",
   },
 });

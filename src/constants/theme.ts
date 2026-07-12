@@ -63,3 +63,14 @@ export const Spacing = {
 
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
 export const MaxContentWidth = 800;
+export const BakeryColors = {
+  background: '#FFF8F3',
+  surface: '#FFFFFF',
+  border: '#F6E1D3',
+  chip: '#FDEDF1',
+  primary: '#F2A6B8',
+  primaryDark: '#E27F98',
+  secondary: '#C98B5E',
+  textPrimary: '#5B4636',
+  textSecondary: '#B29A8B',
+} as const;
