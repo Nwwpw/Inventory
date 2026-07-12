@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   SafeAreaView,
   ScrollView,
@@ -11,7 +12,41 @@ import {
 
 import { BakeryColors } from "@/constants/theme";
 
+type Locale = "en" | "th";
+
+const translations = {
+  en: {
+    eyebrow: "BAKERY SHOP",
+    title: "Bakery Stock",
+    searchPlaceholder: "Search pastries, categories...",
+    filter: "⚲ Filter",
+    addButton: "Add New Pastry",
+    emptyTitle: "The pastry shelf is still empty",
+    emptySubtitle: "Start adding your first pastry now",
+    home: "Home",
+    add: "Add",
+    menu: "Pastries",
+    categories: "Categories",
+  },
+  th: {
+    eyebrow: "ร้านเบเกอรี่",
+    title: "สต็อกเบเกอรี่",
+    searchPlaceholder: "ค้นหาขนมและหมวดหมู่...",
+    filter: "⚲ ตัวกรอง",
+    addButton: "เพิ่มขนมใหม่",
+    emptyTitle: "ชั้นวางขนมยังว่างอยู่",
+    emptySubtitle: "เริ่มเพิ่มขนมแรกของคุณเลยตอนนี้",
+    home: "หน้าแรก",
+    add: "เพิ่ม",
+    menu: "ขนม",
+    categories: "หมวดหมู่",
+  },
+};
+
 export default function ProductHeader() {
+  const [locale, setLocale] = useState<Locale>("en");
+  const t = locale === "en" ? translations.en : translations.th;
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={BakeryColors.background} />
@@ -22,12 +57,20 @@ export default function ProductHeader() {
           <Text style={styles.menuIcon}>☰</Text>
         </TouchableOpacity>
         <View style={styles.titleWrap}>
-          <Text style={styles.headerEyebrow}>Bakery Shop</Text>
-          <Text style={styles.headerTitle}>Bakery Stock</Text>
+          <Text style={styles.headerEyebrow}>{t.eyebrow}</Text>
+          <Text style={styles.headerTitle}>{t.title}</Text>
         </View>
-        <TouchableOpacity style={styles.profileButton}>
-          <Text style={styles.profileIcon}>👤</Text>
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.langButton}
+            onPress={() => setLocale((current) => (current === "en" ? "th" : "en"))}
+          >
+            <Text style={styles.langButtonText}>{locale === "en" ? "ไทย" : "EN"}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.profileButton}>
+            <Text style={styles.profileIcon}>👤</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Search and Filter */}
@@ -36,20 +79,20 @@ export default function ProductHeader() {
           <Text style={styles.searchIcon}>🔍</Text>
           <TextInput
             style={styles.searchInput}
-            placeholder="Search pastries, categories..."
+            placeholder={t.searchPlaceholder}
             placeholderTextColor={BakeryColors.textSecondary}
             editable={true}
           />
         </View>
         <TouchableOpacity style={styles.filterButton}>
-          <Text style={styles.filterIcon}>Filter🔻</Text>
+          <Text style={styles.filterIcon}>{t.filter}</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.addRow}>
         <TouchableOpacity style={styles.addButton}>
           <Text style={styles.addButtonIcon}>＋</Text>
-          <Text style={styles.addButtonText}>Add New Pastry</Text>
+          <Text style={styles.addButtonText}>{t.addButton}</Text>
         </TouchableOpacity>
       </View>
 
@@ -61,9 +104,9 @@ export default function ProductHeader() {
         {/* You can add product items here */}
         <View style={styles.emptyState}>
           <Text style={styles.emptyIcon}>🧁</Text>
-          <Text style={styles.emptyTitle}>The pastry shelf is still empty</Text>
+          <Text style={styles.emptyTitle}>{t.emptyTitle}</Text>
           <Text style={styles.emptySubtitle}>
-            Start adding your first pastry now
+            {t.emptySubtitle}
           </Text>
         </View>
       </ScrollView>
@@ -72,24 +115,24 @@ export default function ProductHeader() {
       <View style={styles.bottomNav}>
         <TouchableOpacity style={styles.navItem}>
           <Text style={styles.navIcon}>🏠</Text>
-          <Text style={styles.navText}>Home</Text>
+          <Text style={styles.navText}>{t.home}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.navItem}>
           <Text style={styles.navIcon}>➕</Text>
-          <Text style={styles.navText}>Add</Text>
+          <Text style={styles.navText}>{t.add}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.navItemActive}>
           <View style={styles.navActivePill}>
             <Text style={styles.navIconActive}>🧁</Text>
           </View>
-          <Text style={styles.navTextActive}>Pastries</Text>
+          <Text style={styles.navTextActive}>{t.menu}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.navItem}>
           <Text style={styles.navIcon}>🗂️</Text>
-          <Text style={styles.navText}>Categories</Text>
+          <Text style={styles.navText}>{t.categories}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -144,6 +187,24 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "700",
     color: BakeryColors.textPrimary,
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  langButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: BakeryColors.chip,
+    borderWidth: 1,
+    borderColor: BakeryColors.border,
+  },
+  langButtonText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: BakeryColors.primaryDark,
   },
   profileButton: {
     width: 34,

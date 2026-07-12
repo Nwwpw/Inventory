@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { FlatList, StatusBar, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -6,45 +7,92 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BakeryColors } from '@/constants/theme';
 
-const PRODUCTS: Product[] = [
+const PRODUCTS: Array<Product & { nameEn: string; nameTh: string; categoryEn: string; categoryTh: string }> = [
   {
     id: '1',
-    name: 'Butter Croissant',
-    category: 'Pastry',
+    nameEn: 'Butter Croissant',
+    nameTh: 'ครัวซองต์เนย',
+    categoryEn: 'Pastry',
+    categoryTh: 'ขนมอบ',
     price: '55',
     image: 'https://i.pinimg.com/736x/05/4b/1a/054b1ae2136808ae87e264fb7724f4c3.jpg',
   },
   {
     id: '2',
-    name: 'Chocolate Fudge Cake',
-    category: 'Cake',
+    nameEn: 'Chocolate Fudge Cake',
+    nameTh: 'ช็อกโกแลตฟัดจ์เค้ก',
+    categoryEn: 'Cake',
+    categoryTh: 'เค้ก',
     price: '320',
     image: 'https://www.hickoryfarms.com/on/demandware.static/-/Sites-Web-Master-Catalog/default/dwee90ec6c/images/products/decadent-chocolate-fudge-layer-cake-064026-1.jpg',
   },
   {
     id: '3',
-    name: 'Strawberry Macaron',
-    category: 'Macaron',
+    nameEn: 'Strawberry Macaron',
+    nameTh: 'มาการองสตรอเบอรี่',
+    categoryEn: 'Macaron',
+    categoryTh: 'มาการอง',
     price: '45',
     image: 'https://everythingmarina.com/wp-content/uploads/2022/01/AZ3A3254-2-683x1024.jpg',
   },
   {
     id: '4',
-    name: 'Vanilla Cupcake',
-    category: 'Cupcake',
+    nameEn: 'Vanilla Cupcake',
+    nameTh: 'คัพเค้กวานิลลา',
+    categoryEn: 'Cupcake',
+    categoryTh: 'คัพเค้ก',
     price: '65',
     image: 'https://i.pinimg.com/originals/c1/b8/30/c1b830ad69f1025ba3f40e505013107f.jpg',
   },
   {
     id: '5',
-    name: 'Chocolate Chip Cookies',
-    category: 'Cookies',
+    nameEn: 'Chocolate Chip Cookies',
+    nameTh: 'คุกกี้ช็อกโกแลตชิป',
+    categoryEn: 'Cookies',
+    categoryTh: 'คุกกี้',
     price: '40',
     image: 'https://sallysbakingaddiction.com/wp-content/uploads/2013/05/classic-chocolate-chip-cookies.jpg',
   },
 ];
 
+type Locale = 'en' | 'th';
+
+const translations = {
+  en: {
+    eyebrow: 'BAKERY SHOP',
+    title: 'Bakery Stock',
+    searchPlaceholder: 'Search pastries, categories...',
+    filter: 'Filter🔻',
+    addButton: 'Add New Pastry',
+    sectionLabel: (count: number) => `All Products (${count})`,
+    home: 'Home',
+    add: 'Add',
+    menu: 'Menu',
+    settings: 'Settings',
+  },
+  th: {
+    eyebrow: 'ร้านเบเกอรี่',
+    title: 'สต็อกเบเกอรี่',
+    searchPlaceholder: 'ค้นหาขนมและหมวดหมู่...',
+    filter: 'ตัวกรอง🔻',
+    addButton: 'เพิ่มขนมใหม่',
+    sectionLabel: (count: number) => `สินค้าทั้งหมด (${count})`,
+    home: 'หน้าแรก',
+    add: 'เพิ่ม',
+    menu: 'เมนู',
+    settings: 'ตั้งค่า',
+  },
+};
+
 export default function HomeScreen() {
+  const [locale, setLocale] = useState<Locale>('en');
+  const t = locale === 'en' ? translations.en : translations.th;
+  const visibleProducts = PRODUCTS.map((product) => ({
+    ...product,
+    name: locale === 'en' ? product.nameEn : product.nameTh,
+    category: locale === 'en' ? product.categoryEn : product.categoryTh,
+  }));
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <StatusBar barStyle="dark-content" backgroundColor={BakeryColors.background} />
@@ -54,12 +102,20 @@ export default function HomeScreen() {
           <ThemedText style={styles.categoryIcon}>☰</ThemedText>
         </TouchableOpacity>
         <View style={styles.titleWrap}>
-          <ThemedText style={styles.headerEyebrow}>BAKERY SHOP</ThemedText>
-          <ThemedText style={styles.headerTitle}>Bakery Stock</ThemedText>
+          <ThemedText style={styles.headerEyebrow}>{t.eyebrow}</ThemedText>
+          <ThemedText style={styles.headerTitle}>{t.title}</ThemedText>
         </View>
-        <TouchableOpacity style={styles.profileButton}>
-          <ThemedText style={styles.profileIcon}>👤</ThemedText>
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.langButton}
+            onPress={() => setLocale((current) => (current === 'en' ? 'th' : 'en'))}
+          >
+            <ThemedText style={styles.langButtonText}>{locale === 'en' ? 'ไทย' : 'EN'}</ThemedText>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.profileButton}>
+            <ThemedText style={styles.profileIcon}>👤</ThemedText>
+          </TouchableOpacity>
+        </View>
       </ThemedView>
 
       <View style={styles.searchContainer}>
@@ -67,30 +123,30 @@ export default function HomeScreen() {
           <ThemedText style={styles.searchIcon}>🔍</ThemedText>
           <TextInput
             style={styles.searchInput}
-            placeholder="Search pastries, categories..."
+            placeholder={t.searchPlaceholder}
             placeholderTextColor={BakeryColors.textSecondary}
             editable={true}
           />
         </View>
         <TouchableOpacity style={styles.filterButton}>
-          <ThemedText style={styles.filterIcon}>Filter🔻</ThemedText>
+          <ThemedText style={styles.filterIcon}>{t.filter}</ThemedText>
         </TouchableOpacity>
       </View>
 
       <View style={styles.addRow}>
         <TouchableOpacity style={styles.addButton}>
           <ThemedText style={styles.addButtonIcon}>＋</ThemedText>
-          <ThemedText style={styles.addButtonText}>Add New Pastry</ThemedText>
+          <ThemedText style={styles.addButtonText}>{t.addButton}</ThemedText>
         </TouchableOpacity>
       </View>
 
       <FlatList
         style={styles.list}
         contentContainerStyle={styles.shelfArea}
-        data={PRODUCTS}
+        data={visibleProducts}
         keyExtractor={(item) => item.id}
         ListHeaderComponent={
-          <ThemedText style={styles.sectionLabel}>All Products ({PRODUCTS.length})</ThemedText>
+          <ThemedText style={styles.sectionLabel}>{t.sectionLabel(visibleProducts.length)}</ThemedText>
         }
         renderItem={({ item }) => <ProductCard product={item} />}
       />
@@ -98,24 +154,24 @@ export default function HomeScreen() {
       <ThemedView style={styles.bottomNav}>
         <TouchableOpacity style={styles.navItem}>
           <ThemedText style={styles.navIcon}>🏠</ThemedText>
-          <ThemedText style={styles.navText}>Home</ThemedText>
+          <ThemedText style={styles.navText}>{t.home}</ThemedText>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.navItem}>
           <ThemedText style={styles.navIcon}>➕</ThemedText>
-          <ThemedText style={styles.navText}>Add</ThemedText>
+          <ThemedText style={styles.navText}>{t.add}</ThemedText>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.navItemActive}>
           <View style={styles.navActivePill}>
             <ThemedText style={styles.navIconActive}>🧁</ThemedText>
           </View>
-          <ThemedText style={styles.navTextActive}>Menu</ThemedText>
+          <ThemedText style={styles.navTextActive}>{t.menu}</ThemedText>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.navItem}>
           <ThemedText style={styles.navIcon}>⚙️</ThemedText>
-          <ThemedText style={styles.navText}>Settings</ThemedText>
+          <ThemedText style={styles.navText}>{t.settings}</ThemedText>
         </TouchableOpacity>
       </ThemedView>
     </SafeAreaView>
@@ -160,6 +216,24 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     color: BakeryColors.textPrimary,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  langButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: BakeryColors.chip,
+    borderWidth: 1,
+    borderColor: BakeryColors.border,
+  },
+  langButtonText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: BakeryColors.primaryDark,
   },
   profileButton: {
     width: 34,
