@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { FlatList, StatusBar, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -7,53 +7,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BakeryColors } from '@/constants/theme';
 
-const PRODUCTS: Array<Product & { nameEn: string; nameTh: string; categoryEn: string; categoryTh: string }> = [
-  {
-    id: '1',
-    nameEn: 'Butter Croissant',
-    nameTh: 'ครัวซองต์เนย',
-    categoryEn: 'Pastry',
-    categoryTh: 'ขนมอบ',
-    price: '55',
-    image: 'https://i.pinimg.com/736x/05/4b/1a/054b1ae2136808ae87e264fb7724f4c3.jpg',
-  },
-  {
-    id: '2',
-    nameEn: 'Chocolate Fudge Cake',
-    nameTh: 'ช็อกโกแลตฟัดจ์เค้ก',
-    categoryEn: 'Cake',
-    categoryTh: 'เค้ก',
-    price: '320',
-    image: 'https://www.hickoryfarms.com/on/demandware.static/-/Sites-Web-Master-Catalog/default/dwee90ec6c/images/products/decadent-chocolate-fudge-layer-cake-064026-1.jpg',
-  },
-  {
-    id: '3',
-    nameEn: 'Strawberry Macaron',
-    nameTh: 'มาการองสตรอเบอรี่',
-    categoryEn: 'Macaron',
-    categoryTh: 'มาการอง',
-    price: '45',
-    image: 'https://everythingmarina.com/wp-content/uploads/2022/01/AZ3A3254-2-683x1024.jpg',
-  },
-  {
-    id: '4',
-    nameEn: 'Vanilla Cupcake',
-    nameTh: 'คัพเค้กวานิลลา',
-    categoryEn: 'Cupcake',
-    categoryTh: 'คัพเค้ก',
-    price: '65',
-    image: 'https://i.pinimg.com/originals/c1/b8/30/c1b830ad69f1025ba3f40e505013107f.jpg',
-  },
-  {
-    id: '5',
-    nameEn: 'Chocolate Chip Cookies',
-    nameTh: 'คุกกี้ช็อกโกแลตชิป',
-    categoryEn: 'Cookies',
-    categoryTh: 'คุกกี้',
-    price: '40',
-    image: 'https://sallysbakingaddiction.com/wp-content/uploads/2013/05/classic-chocolate-chip-cookies.jpg',
-  },
-];
+const PRODUCTS_URL = "https://raw.githubusercontent.com/Nwwpw/Inventory/refs/heads/master/products.json";
 
 type Locale = 'en' | 'th';
 
@@ -86,12 +40,32 @@ const translations = {
 
 export default function HomeScreen() {
   const [locale, setLocale] = useState<Locale>('en');
+  const [products, setProducts] = useState<Product[]>([]); // ✅ ประกาศ State ไว้ด้านบนสุดก่อนเรียกใช้งาน
+
   const t = locale === 'en' ? translations.en : translations.th;
-  const visibleProducts = PRODUCTS.map((product) => ({
-    ...product,
-    name: locale === 'en' ? product.nameEn : product.nameTh,
-    category: locale === 'en' ? product.categoryEn : product.categoryTh,
-  }));
+
+  // ✅ ใช้ useMemo ย้ายมาไว้ข้างล่าง State เพื่อแปลงข้อมูลตามภาษาอย่างมีประสิทธิภาพ
+  const visibleProducts = useMemo(() => {
+    return products.map((product) => ({
+      ...product,
+      name: locale === 'en' ? product.nameEn : product.nameTh,
+      category: locale === 'en' ? product.categoryEn : product.categoryTh,
+    }));
+  }, [products, locale]);
+
+  useEffect(() => {
+    async function loadProducts() {
+      try {
+        const response = await fetch(PRODUCTS_URL);
+        const data = await response.json();
+        setProducts(data);
+      } catch (error) {
+        console.error("Failed to load products:", error);
+      }
+    }
+
+    void loadProducts();
+  }, []);
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -380,4 +354,3 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
-
