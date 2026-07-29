@@ -2,12 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { FlatList, StatusBar, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ProductCard, type Product } from '@/components/product-card';
+import { ProductCard } from '@/components/product-card';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BakeryColors } from '@/constants/theme';
 
-const PRODUCTS_URL = "https://raw.githubusercontent.com/Nwwpw/Inventory/refs/heads/master/products.json";
+const PRODUCTS_URL = "http://localhost:3085/api/products";
 
 type Locale = 'en' | 'th';
 
@@ -40,25 +40,34 @@ const translations = {
 
 export default function HomeScreen() {
   const [locale, setLocale] = useState<Locale>('en');
-  const [products, setProducts] = useState<Product[]>([]); // ✅ ประกาศ State ไว้ด้านบนสุดก่อนเรียกใช้งาน
+  const [rawProducts, setRawProducts] = useState<any[]>([]);
 
   const t = locale === 'en' ? translations.en : translations.th;
 
-  // ✅ ใช้ useMemo ย้ายมาไว้ข้างล่าง State เพื่อแปลงข้อมูลตามภาษาอย่างมีประสิทธิภาพ
+  // Map ข้อมูลจาก MySQL ให้เข้ากับ Props ของ ProductCard
   const visibleProducts = useMemo(() => {
-    return products.map((product) => ({
-      ...product,
-      name: locale === 'en' ? product.nameEn : product.nameTh,
-      category: locale === 'en' ? product.categoryEn : product.categoryTh,
+    return rawProducts.map((item) => ({
+      ...item,
+      id: item.id?.toString(),
+      // รองรับทั้งตารางแบบใหม่ (name, category) และแบบแยกภาษา (nameEn, nameTh)
+      name: locale === 'en' 
+        ? (item.nameEn || item.name) 
+        : (item.nameTh || item.name),
+      category: locale === 'en' 
+        ? (item.categoryEn || item.category) 
+        : (item.categoryTh || item.category),
+      // แปลง stock หรือ price สำหรับโชว์ในการ์ด
+      price: item.price ? `${item.price} ฿` : (item.stock !== undefined ? `Stock: ${item.stock}` : ''),
+      image: item.image || item.imageUrl,
     }));
-  }, [products, locale]);
+  }, [rawProducts, locale]);
 
   useEffect(() => {
     async function loadProducts() {
       try {
         const response = await fetch(PRODUCTS_URL);
         const data = await response.json();
-        setProducts(data);
+        setRawProducts(data);
       } catch (error) {
         console.error("Failed to load products:", error);
       }
