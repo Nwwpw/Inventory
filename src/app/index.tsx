@@ -1,15 +1,21 @@
-import { useEffect, useMemo, useState } from 'react';
-import { FlatList, StatusBar, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  FlatList,
+  StatusBar,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ProductCard } from '@/components/product-card';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BakeryColors } from '@/constants/theme';
-
-const PRODUCTS_URL = "http://localhost:3085/api/products";
-
-type Locale = 'en' | 'th';
+import { useLanguage } from '@/context/language-context'; // 🟢 1. Import useLanguage
+import { useProducts } from '@/context/product-context';
 
 const translations = {
   en: {
@@ -17,8 +23,11 @@ const translations = {
     title: 'Bakery Stock',
     searchPlaceholder: 'Search pastries, categories...',
     filter: 'Filter🔻',
-    addButton: 'Add New Pastry',
+    quickAddBtn: '➕ Add Product',
     sectionLabel: (count: number) => `All Products (${count})`,
+    editBtn: 'Edit',
+    inStock: 'In Stock',
+    outOfStock: 'Out of Stock',
     home: 'Home',
     add: 'Add',
     menu: 'Menu',
@@ -29,8 +38,11 @@ const translations = {
     title: 'สต็อกเบเกอรี่',
     searchPlaceholder: 'ค้นหาขนมและหมวดหมู่...',
     filter: 'ตัวกรอง🔻',
-    addButton: 'เพิ่มขนมใหม่',
+    quickAddBtn: '➕ เพิ่มขนม',
     sectionLabel: (count: number) => `สินค้าทั้งหมด (${count})`,
+    editBtn: 'แก้ไข',
+    inStock: 'คงเหลือ',
+    outOfStock: 'สินค้าหมด',
     home: 'หน้าแรก',
     add: 'เพิ่ม',
     menu: 'เมนู',
@@ -39,47 +51,77 @@ const translations = {
 };
 
 export default function HomeScreen() {
-  const [locale, setLocale] = useState<Locale>('en');
-  const [rawProducts, setRawProducts] = useState<any[]>([]);
+  const router = useRouter();
+  const { products, isLoading, refreshProducts } = useProducts();
+  
+  // 🟢 2. ดึง locale และ toggleLanguage มาจาก Global Context
+  const { locale, toggleLanguage } = useLanguage();
+  
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  // 🟢 เช็กว่า Client โหลดเสร็จหรือยัง เพื่อป้องกัน SSR 500 Error
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const t = locale === 'en' ? translations.en : translations.th;
 
-  // Map ข้อมูลจาก MySQL ให้เข้ากับ Props ของ ProductCard
-  const visibleProducts = useMemo(() => {
-    return rawProducts.map((item) => ({
-      ...item,
-      id: item.id?.toString(),
-      // รองรับทั้งตารางแบบใหม่ (name, category) และแบบแยกภาษา (nameEn, nameTh)
-      name: locale === 'en' 
-        ? (item.nameEn || item.name) 
-        : (item.nameTh || item.name),
-      category: locale === 'en' 
-        ? (item.categoryEn || item.category) 
-        : (item.categoryTh || item.category),
-      // แปลง stock หรือ price สำหรับโชว์ในการ์ด
-      price: item.price ? `${item.price} ฿` : (item.stock !== undefined ? `Stock: ${item.stock}` : ''),
-      image: item.image || item.imageUrl,
-    }));
-  }, [rawProducts, locale]);
-
-  useEffect(() => {
-    async function loadProducts() {
-      try {
-        const response = await fetch(PRODUCTS_URL);
-        const data = await response.json();
-        setRawProducts(data);
-      } catch (error) {
-        console.error("Failed to load products:", error);
+  // 🟢 เรียก refreshProducts
+  useFocusEffect(
+    useCallback(() => {
+      if (isMounted && typeof refreshProducts === 'function') {
+        refreshProducts();
       }
-    }
+    }, [isMounted])
+  );
 
-    void loadProducts();
-  }, []);
+  // 🟢 การแปลงข้อมูลสำหรับแสดงผล
+  const visibleProducts = useMemo(() => {
+    if (!Array.isArray(products)) return [];
+
+    return products
+      .filter((item: any) => {
+        if (!item) return false;
+        const name = (item.nameEn || item.nameTh || item.name || '').toLowerCase();
+        const category = (item.categoryEn || item.categoryTh || item.category || '').toLowerCase();
+        const query = searchQuery.toLowerCase().trim();
+        return name.includes(query) || category.includes(query);
+      })
+      .map((item: any) => {
+        const rawPrice = item.price ?? item.price_baht ?? item.price_per_unit ?? 0;
+        const rawStock = item.stock ?? item.quantity ?? item.amount ?? item.stock_quantity ?? 0;
+        const imageUrl = item.image || item.imageUrl || item.image_url || null;
+
+        return {
+          ...item,
+          id: String(item.id ?? Math.random()),
+          name: locale === 'en'
+            ? (item.nameEn || item.name || item.nameTh)
+            : (item.nameTh || item.name || item.nameEn),
+          category: locale === 'en'
+            ? (item.categoryEn || item.category || item.categoryTh)
+            : (item.categoryTh || item.category || item.categoryEn),
+          price: `${rawPrice} ฿`,
+          stock: Number(rawStock) || 0,
+          quantity: Number(rawStock) || 0,
+          image: imageUrl, 
+          imageUrl: imageUrl,
+        };
+      });
+  }, [products, locale, searchQuery]);
+
+  // ป้องกัน Render พังช่วง SSR
+  if (!isMounted) {
+    return null;
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <StatusBar barStyle="dark-content" backgroundColor={BakeryColors.background} />
 
+      {/* Header */}
       <ThemedView style={styles.header}>
         <TouchableOpacity style={styles.categoryButton}>
           <ThemedText style={styles.categoryIcon}>☰</ThemedText>
@@ -89,9 +131,10 @@ export default function HomeScreen() {
           <ThemedText style={styles.headerTitle}>{t.title}</ThemedText>
         </View>
         <View style={styles.headerActions}>
+          {/* 🟢 3. ปรับปุ่มให้สลับภาษาระดับ Global Context */}
           <TouchableOpacity
             style={styles.langButton}
-            onPress={() => setLocale((current) => (current === 'en' ? 'th' : 'en'))}
+            onPress={toggleLanguage}
           >
             <ThemedText style={styles.langButtonText}>{locale === 'en' ? 'ไทย' : 'EN'}</ThemedText>
           </TouchableOpacity>
@@ -101,6 +144,7 @@ export default function HomeScreen() {
         </View>
       </ThemedView>
 
+      {/* Search Bar */}
       <View style={styles.searchContainer}>
         <View style={styles.searchBar}>
           <ThemedText style={styles.searchIcon}>🔍</ThemedText>
@@ -108,6 +152,8 @@ export default function HomeScreen() {
             style={styles.searchInput}
             placeholder={t.searchPlaceholder}
             placeholderTextColor={BakeryColors.textSecondary}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
             editable={true}
           />
         </View>
@@ -116,31 +162,41 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.addRow}>
-        <TouchableOpacity style={styles.addButton}>
-          <ThemedText style={styles.addButtonIcon}>＋</ThemedText>
-          <ThemedText style={styles.addButtonText}>{t.addButton}</ThemedText>
-        </TouchableOpacity>
-      </View>
-
+      {/* รายการเบเกอรี่ */}
       <FlatList
         style={styles.list}
         contentContainerStyle={styles.shelfArea}
         data={visibleProducts}
         keyExtractor={(item) => item.id}
+        refreshing={isLoading}
+        onRefresh={refreshProducts}
         ListHeaderComponent={
-          <ThemedText style={styles.sectionLabel}>{t.sectionLabel(visibleProducts.length)}</ThemedText>
+          <View style={styles.listHeaderRow}>
+            <ThemedText style={styles.sectionLabel}>{t.sectionLabel(visibleProducts.length)}</ThemedText>
+            <TouchableOpacity style={styles.quickAddBtn} onPress={() => router.push('/add')}>
+              <ThemedText style={styles.quickAddBtnText}>{t.quickAddBtn}</ThemedText>
+            </TouchableOpacity>
+          </View>
         }
-        renderItem={({ item }) => <ProductCard product={item} />}
+        renderItem={({ item }) => (
+          <ProductCard 
+            product={item} 
+            editText={t.editBtn}
+            inStockText={t.inStock}
+            outOfStockText={t.outOfStock}
+            onEdit={(prod) => router.push({ pathname: '/edit', params: { id: prod.id } })} 
+          />
+        )}
       />
 
+      {/* Bottom Nav */}
       <ThemedView style={styles.bottomNav}>
         <TouchableOpacity style={styles.navItem}>
           <ThemedText style={styles.navIcon}>🏠</ThemedText>
           <ThemedText style={styles.navText}>{t.home}</ThemedText>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity style={styles.navItem} onPress={() => router.push('/add')}>
           <ThemedText style={styles.navIcon}>➕</ThemedText>
           <ThemedText style={styles.navText}>{t.add}</ThemedText>
         </TouchableOpacity>
@@ -277,48 +333,35 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
   },
-  addRow: {
-    paddingHorizontal: 16,
-    paddingTop: 6,
-    paddingBottom: 16,
-  },
-  addButton: {
-    backgroundColor: BakeryColors.primary,
-    height: 48,
-    borderRadius: 16,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 6,
-    shadowColor: BakeryColors.primaryDark,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  addButtonIcon: {
-    color: BakeryColors.surface,
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  addButtonText: {
-    color: BakeryColors.surface,
-    fontWeight: '600',
-    fontSize: 14,
-  },
   list: {
     flex: 1,
   },
   shelfArea: {
     paddingHorizontal: 20,
-    paddingTop: 4,
+    paddingTop: 10,
     paddingBottom: 20,
+  },
+  listHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   sectionLabel: {
     fontSize: 13,
     fontWeight: '700',
     color: BakeryColors.secondary,
-    marginBottom: 10,
+  },
+  quickAddBtn: {
+    backgroundColor: '#FFEBF0',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  quickAddBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: BakeryColors.primaryDark,
   },
   bottomNav: {
     flexDirection: 'row',

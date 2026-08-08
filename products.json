@@ -1,8 +1,121 @@
 [
   {
+    "id": 1786125491456,
+    "name": "Lemon Meringue Pie",
+    "category": "Pies & Tarts",
+    "price": 65,
+    "stock": 5,
+    "image": "https://www.glutenfreepalate.com/wp-content/uploads/2023/02/gluten_free_lemon_meringue_pie00006-min-scaled.jpg"
+  },
+  {
+    "id": 1786121075152,
+    "name": "Caramel Pie",
+    "category": "Pies & Tarts",
+    "price": 65,
+    "stock": 15,
+    "image": "https://tse3.mm.bing.net/th/id/OIP.YbNxbBnetDX75M6eW9YlmAHaLH?r=0&rs=1&pid=ImgDetMain&o=7&rm=3"
+  },
+  {
+    "id": 1786120357432,
+    "name": "Banoffee Pie",
+    "category": "Pies & Tarts",
+    "price": 65,
+    "stock": 19,
+    "image": "https://tse1.mm.bing.net/th/id/OIP.j-uzaFj61vk4w_fDiF2cdwHaHa?r=0&rs=1&pid=ImgDetMain&o=7&rm=3"
+  },
+  {
+    "id": 1786118590059,
+    "name": "Strawberry Tart",
+    "category": "Pies & Tarts",
+    "price": 89,
+    "stock": 25,
+    "image": "https://sophiemelody.com/wp-content/uploads/2025/11/fresh-strawberry-tart-with-creamy-filling.png"
+  },
+  {
+    "id": 1786114045839,
+    "name": "Dark Chocolate Lava Cake",
+    "category": "Cakes",
+    "price": 79,
+    "stock": 10,
+    "image": "https://insanelygoodrecipes.com/wp-content/uploads/2024/12/Lava-Cake-2-768x1152.jpg"
+  },
+  {
+    "id": 1786113548029,
+    "name": "Blueberry Muffins",
+    "category": "Bread",
+    "price": 35,
+    "stock": 50,
+    "image": "https://th.bing.com/th/id/OIP.2mjx3PvLv30uZZ8r9O0ywgHaHa?w=186&h=186&c=7&r=0&o=7&dpr=1.3&pid=1.7&rm=3"
+  },
+  {
+    "id": 1786112714786,
+    "name": "Rasberry Jelly Cake",
+    "category": "Cakes",
+    "price": 59,
+    "stock": 30,
+    "image": "https://th.bing.com/th/id/R.a540c3732b56f1aa53bf6c19087feb99?rik=apVaQNSKXOeg4A&pid=ImgRaw&r=0"
+  },
+  {
+    "id": 1786112398701,
+    "name": "Dark Chocolate Raspberry Mousse Cake",
+    "category": "Cakes",
+    "price": 89,
+    "stock": 8,
+    "image": "https://tse3.mm.bing.net/th/id/OIP.50zqAG1O3_bO8uQvrdSEtQHaJQ?r=0&rs=1&pid=ImgDetMain&o=7&rm=3"
+  },
+  {
+    "id": 1786112137588,
+    "name": "Oreo Cheesecake",
+    "category": "Cakes",
+    "price": 99,
+    "stock": 6,
+    "image": "https://tse4.mm.bing.net/th/id/OIP.x2aKztgWewPHXRER345gkwHaLH?r=0&rs=1&pid=ImgDetMain&o=7&rm=3"
+  },
+  {
+    "id": 1786111993618,
+    "name": "Red Velvet Cake",
+    "category": "Cakes",
+    "price": 129,
+    "stock": 5,
+    "image": "https://tse4.mm.bing.net/th/id/OIP.v08vtBcsznpt-pEOIE5ZhAHaHa?r=0&rs=1&pid=ImgDetMain&o=7&rm=3"
+  },
+  {
+    "id": 1786103256509,
+    "name": "Teramisu",
+    "category": "Cakes",
+    "price": 89,
+    "stock": 23,
+    "image": "https://zhangcatherine.com/wp-content/uploads/2023/05/12001200-2.jpg"
+  },
+  {
+    "id": 1786103183166,
+    "name": "Shio Pan (Salted Butter Bread)",
+    "category": "Bread",
+    "price": 55,
+    "stock": 10,
+    "image": "https://tse3.mm.bing.net/th/id/OIP.xJQ7jcqeF43kXcTzO3wbIAHaLH?r=0&rs=1&pid=ImgDetMain&o=7&rm=3"
+  },
+  {
+    "id": 1786103111371,
+    "name": "Korean Cream Cheese Garlic Bread",
+    "category": "Bread",
+    "price": 95,
+    "stock": 10,
+    "image": "https://tse3.mm.bing.net/th/id/OIP.hxB-yiPwTqVKlN7QBVH5OAHaJ4?r=0&rs=1&pid=ImgDetMain&o=7&rm=3"
+  },
+  {
+    "id": 1786099820776,
+    "name": "Orange Cake",
+    "category": "Cakes",
+    "stock": 10,
+    "image": "https://i.pinimg.com/originals/1d/f4/5c/1df45cef6abf1df4a58c7f4f3647d91b.jpg",
+    "price": 15
+  },
+  {
     "id": 1,
     "name": "Butter Croissant",
     "category": "Croissants",
+    "price": 79,
     "stock": 20,
     "image": "https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=500"
   },
@@ -10,6 +123,7 @@
     "id": 2,
     "name": "Strawberry Shortcake",
     "category": "Cakes",
+    "price": 109,
     "stock": 15,
     "image": "https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=500"
   },
@@ -17,13 +131,15 @@
     "id": 3,
     "name": "Blueberry Cheese Pie",
     "category": "Pies & Tarts",
-    "stock": 10,
+    "price": 119,
+    "stock": 100,
     "image": "https://images.unsplash.com/photo-1533134242443-d4fd215305ad?w=500"
   },
   {
     "id": 4,
     "name": "Chocolate Fudge Cake",
     "category": "Cakes",
+    "price": 105,
     "stock": 12,
     "image": "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=500"
   },
@@ -31,7 +147,8 @@
     "id": 5,
     "name": "Matcha Danish",
     "category": "Pastries",
+    "price": 59,
     "stock": 18,
-    "image": "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=500"
+    "image": "https://shop.rtpastry.com/wp-content/uploads/2023/03/3tVJl6NdrdNnm9E5alod.jpg"
   }
 ]

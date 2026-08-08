@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useRouter } from "expo-router";
+import { useMemo, useState } from "react";
 import {
+  FlatList,
   SafeAreaView,
-  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -10,7 +11,9 @@ import {
   View
 } from "react-native";
 
+import { ProductCard } from "@/components/product-card";
 import { BakeryColors } from "@/constants/theme";
+import { useProducts } from "@/context/product-context";
 
 type Locale = "en" | "th";
 
@@ -43,9 +46,33 @@ const translations = {
   },
 };
 
-export default function ProductHeader() {
+export default function ExploreScreen() {
+  const router = useRouter();
   const [locale, setLocale] = useState<Locale>("en");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // 🟢 ใช้ Context ดึงข้อมูลแทนการยิง IP ตรง
+  const { products: rawProducts, isLoading, refreshProducts } = useProducts();
+
   const t = locale === "en" ? translations.en : translations.th;
+
+  // 🧠 Map ข้อมูล + กรองด้วย Search Query
+  const visibleProducts = useMemo(() => {
+    if (!Array.isArray(rawProducts)) return [];
+
+    return rawProducts
+      .map((item: any) => ({
+        ...item,
+        id: item.id?.toString(),
+        name: locale === "en" ? (item.nameEn || item.name) : (item.nameTh || item.name),
+        category: locale === "en" ? (item.categoryEn || item.category) : (item.categoryTh || item.category),
+        price: item.price ? `${item.price} ฿` : (item.stock !== undefined ? `Stock: ${item.stock}` : ""),
+        image: item.image || item.imageUrl,
+      }))
+      .filter((item) =>
+        item.name?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+  }, [rawProducts, locale, searchQuery]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -81,7 +108,8 @@ export default function ProductHeader() {
             style={styles.searchInput}
             placeholder={t.searchPlaceholder}
             placeholderTextColor={BakeryColors.textSecondary}
-            editable={true}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
           />
         </View>
         <TouchableOpacity style={styles.filterButton}>
@@ -89,36 +117,44 @@ export default function ProductHeader() {
         </TouchableOpacity>
       </View>
 
+      {/* ปุ่มกดไปหน้าเพิ่มขนม */}
       <View style={styles.addRow}>
-        <TouchableOpacity style={styles.addButton}>
+        <TouchableOpacity 
+          style={styles.addButton}
+          onPress={() => router.push("/add")}
+        >
           <Text style={styles.addButtonIcon}>＋</Text>
           <Text style={styles.addButtonText}>{t.addButton}</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Main Content Area (For layout buffer) */}
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={styles.shelfArea}
-      >
-        {/* You can add product items here */}
+      {/* Main Content Area */}
+      {visibleProducts.length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyIcon}>🧁</Text>
           <Text style={styles.emptyTitle}>{t.emptyTitle}</Text>
-          <Text style={styles.emptySubtitle}>
-            {t.emptySubtitle}
-          </Text>
+          <Text style={styles.emptySubtitle}>{t.emptySubtitle}</Text>
         </View>
-      </ScrollView>
+      ) : (
+        <FlatList
+          style={{ flex: 1 }}
+          contentContainerStyle={styles.shelfArea}
+          data={visibleProducts}
+          keyExtractor={(item) => item.id}
+          refreshing={isLoading}
+          onRefresh={refreshProducts}
+          renderItem={({ item }) => <ProductCard product={item} />}
+        />
+      )}
 
       {/* Bottom Navigation */}
       <View style={styles.bottomNav}>
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/")}>
           <Text style={styles.navIcon}>🏠</Text>
           <Text style={styles.navText}>{t.home}</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/add")}>
           <Text style={styles.navIcon}>➕</Text>
           <Text style={styles.navText}>{t.add}</Text>
         </TouchableOpacity>
@@ -138,16 +174,6 @@ export default function ProductHeader() {
     </SafeAreaView>
   );
 }
-
-// ---- Cute Minimal Bakery palette (see BakeryColors in constants/theme.ts) ----
-// Background cream : BakeryColors.background (#FFF8F3)
-// Card white       : BakeryColors.surface   (#FFFFFF)
-// Frosting pink    : BakeryColors.primary   (#F2A6B8)
-// Pink pressed     : BakeryColors.primaryDark (#E27F98)
-// Caramel accent   : BakeryColors.secondary (#C98B5E)
-// Soft peach border: BakeryColors.border    (#F6E1D3)
-// Text cocoa       : BakeryColors.textPrimary (#5B4636)
-// Muted mocha      : BakeryColors.textSecondary (#B29A8B)
 
 const styles = StyleSheet.create({
   container: {
@@ -295,12 +321,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   shelfArea: {
-    flexGrow: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 40,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
   },
   emptyState: {
+    flex: 1,
+    justifyContent: "center",
     alignItems: "center",
     paddingVertical: 40,
   },

@@ -1,0 +1,36 @@
+-- products.sql
+-- Generated from products.json
+-- Inserts products into `products` table. Adjust table/column names if different.
+
+START TRANSACTION;
+
+INSERT INTO `products` (`id`,`name`,`category`,`price`,`stock`,`image`) VALUES
+(1786125491456,'Lemon Meringue Pie','Pies & Tarts',65,5,'https://www.glutenfreepalate.com/wp-content/uploads/2023/02/gluten_free_lemon_meringue_pie00006-min-scaled.jpg'),
+(1786121075152,'Caramel Pie','Pies & Tarts',65,15,'https://tse3.mm.bing.net/th/id/OIP.YbNxbBnetDX75M6eW9YlmAHaLH?r=0&rs=1&pid=ImgDetMain&o=7&rm=3'),
+(1786120357432,'Banoffee Pie','Pies & Tarts',65,19,'https://tse1.mm.bing.net/th/id/OIP.j-uzaFj61vk4w_fDiF2cdwHaHa?r=0&rs=1&pid=ImgDetMain&o=7&rm=3'),
+(1786118590059,'Strawberry Tart','Pies & Tarts',89,25,'https://sophiemelody.com/wp-content/uploads/2025/11/fresh-strawberry-tart-with-creamy-filling.png'),
+(1786114045839,'Dark Chocolate Lava Cake','Cakes',79,10,'https://insanelygoodrecipes.com/wp-content/uploads/2024/12/Lava-Cake-2-768x1152.jpg'),
+(1786113548029,'Blueberry Muffins','Bread',35,50,'https://th.bing.com/th/id/OIP.2mjx3PvLv30uZZ8r9O0ywgHaHa?w=186&h=186&c=7&r=0&o=7&dpr=1.3&pid=1.7&rm=3'),
+(1786112714786,'Rasberry Jelly Cake','Cakes',59,30,'https://th.bing.com/th/id/R.a540c3732b56f1aa53bf6c19087feb99?rik=apVaQNSKXOeg4A&pid=ImgRaw&r=0'),
+(1786112398701,'Dark Chocolate Raspberry Mousse Cake','Cakes',89,8,'https://tse3.mm.bing.net/th/id/OIP.50zqAG1O3_bO8uQvrdSEtQHaJQ?r=0&rs=1&pid=ImgDetMain&o=7&rm=3'),
+(1786112137588,'Oreo Cheesecake','Cakes',99,6,'https://tse4.mm.bing.net/th/id/OIP.x2aKztgWewPHXRER345gkwHaLH?r=0&rs=1&pid=ImgDetMain&o=7&rm=3'),
+(1786111993618,'Red Velvet Cake','Cakes',129,5,'https://tse4.mm.bing.net/th/id/OIP.v08vtBcsznpt-pEOIE5ZhAHaHa?r=0&rs=1&pid=ImgDetMain&o=7&rm=3'),
+(1786103256509,'Teramisu','Cakes',89,23,'https://zhangcatherine.com/wp-content/uploads/2023/05/12001200-2.jpg'),
+(1786103183166,'Shio Pan (Salted Butter Bread)','Bread',55,10,'https://tse3.mm.bing.net/th/id/OIP.xJQ7jcqeF43kXcTzO3wbIAHaLH?r=0&rs=1&pid=ImgDetMain&o=7&rm=3'),
+(1786103111371,'Korean Cream Cheese Garlic Bread','Bread',95,10,'https://tse3.mm.bing.net/th/id/OIP.hxB-yiPwTqVKlN7QBVH5OAHaJ4?r=0&rs=1&pid=ImgDetMain&o=7&rm=3'),
+(1786099820776,'Orange Cake','Cakes',15,10,'https://i.pinimg.com/originals/1d/f4/5c/1df45cef6abf1df4a58c7f4f3647d91b.jpg'),
+(1,'Butter Croissant','Croissants',79,20,'https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=500'),
+(2,'Strawberry Shortcake','Cakes',109,15,'https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=500'),
+(3,'Blueberry Cheese Pie','Pies & Tarts',119,100,'https://images.unsplash.com/photo-1533134242443-d4fd215305ad?w=500'),
+(4,'Chocolate Fudge Cake','Cakes',105,12,'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=500'),
+(5,'Matcha Danish','Pastries',59,18,'https://shop.rtpastry.com/wp-content/uploads/2023/03/3tVJl6NdrdNnm9E5alod.jpg')
+ON DUPLICATE KEY UPDATE
+  `name` = VALUES(`name`),
+  `category` = VALUES(`category`),
+  `price` = VALUES(`price`),
+  `stock` = VALUES(`stock`),
+  `image` = VALUES(`image`);
+
+COMMIT;
+
+-- End of file
