@@ -1,3 +1,4 @@
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
@@ -63,7 +64,7 @@ const translations = {
     pricePlaceholder: 'e.g. 85',
     stockLabel: 'Stock Quantity (pcs) *',
     stockPlaceholder: 'e.g. 10',
-    imageLabel: 'Image URL',
+    imageLabel: 'Product Image',
     imagePlaceholder: 'https://...',
     previewLabel: 'Preview:',
     editBtn: 'Save Changes',
@@ -96,7 +97,7 @@ const translations = {
     pricePlaceholder: 'เช่น 85',
     stockLabel: 'จำนวนในสต็อก (ชิ้น) *',
     stockPlaceholder: 'เช่น 10',
-    imageLabel: 'URL รูปภาพ',
+    imageLabel: 'รูปสินค้า',
     imagePlaceholder: 'https://...',
     previewLabel: 'ตัวอย่างแสดงผล:',
     editBtn: 'บันทึกการแก้ไข',
@@ -129,9 +130,11 @@ export default function AddProductScreen({ product, onSuccess, onCancel }: AddPr
   const [category, setCategory] = useState(product?.category ?? '');
   const [price, setPrice] = useState(product?.price != null ? String(product.price) : '');
   const [stock, setStock] = useState(product?.stock != null ? String(product.stock) : '');
-  const [imageUrl, setImageUrl] = useState(product?.imageUrl ?? '');
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [imageUrl, setImageUrl] =
+    useState(product?.imageUrl ?? '');
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const selectedCategories = useMemo(() => parseCategories(category), [category]);
 
   // 🟢 ดึงรายการหมวดหมู่ที่มีอยู่เดิมจาก products (คัดแยกเฉพาะค่าไม่ซ้ำกัน)
@@ -188,6 +191,16 @@ export default function AddProductScreen({ product, onSuccess, onCancel }: AddPr
   const handleSubmit = async () => {
     if (!name.trim() || !price.trim()) {
       Alert.alert(t.alertTitle, t.alertMsg);
+      return;
+    }
+
+    if (Number(stock) < 0) {
+      Alert.alert(
+        locale === 'th' ? 'ข้อมูลไม่ถูกต้อง' : 'Invalid Data',
+        locale === 'th'
+          ? 'จำนวนสินค้าในสต็อกต้องไม่ติดลบ'
+          : 'Stock cannot be negative'
+      );
       return;
     }
 
@@ -276,6 +289,23 @@ export default function AddProductScreen({ product, onSuccess, onCancel }: AddPr
     }
   };
 
+      const handlePickImage = async () => {
+      try {
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          quality: 0.8,
+        });
+
+        if (!result.canceled) {
+          setImageUrl(result.assets[0].uri);
+        }
+      } catch (error) {
+        console.error(error);
+        Alert.alert('Error', 'Cannot select image');
+      }
+    };
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <StatusBar barStyle="dark-content" backgroundColor={BakeryColors.background} />
@@ -348,7 +378,10 @@ export default function AddProductScreen({ product, onSuccess, onCancel }: AddPr
             placeholderTextColor={BakeryColors.textSecondary}
             keyboardType="numeric"
             value={price}
-            onChangeText={setPrice}
+            onChangeText={(text) => {
+              const cleaned = text.replace(/[^0-9]/g, '');
+              setPrice(cleaned);
+              }}
           />
 
           <ThemedText style={styles.label}>{t.stockLabel}</ThemedText>
@@ -358,17 +391,32 @@ export default function AddProductScreen({ product, onSuccess, onCancel }: AddPr
             placeholderTextColor={BakeryColors.textSecondary}
             keyboardType="numeric"
             value={stock}
-            onChangeText={setStock}
+            onChangeText={(text) => {
+              const cleaned = text.replace(/[^0-9]/g, '');
+              setStock(cleaned);
+              }}
           />
+          <ThemedText style={styles.label}>
+            {t.imageLabel}
+          </ThemedText>
 
-          <ThemedText style={styles.label}>{t.imageLabel}</ThemedText>
-          <TextInput
-            style={styles.input}
-            placeholder={t.imagePlaceholder}
-            placeholderTextColor={BakeryColors.textSecondary}
-            value={imageUrl}
-            onChangeText={setImageUrl}
-          />
+          <View style={styles.imageInputRow}>
+            <TextInput
+              style={styles.imageInput}
+              placeholder={t.imagePlaceholder}
+              placeholderTextColor={BakeryColors.textSecondary}
+              value={imageUrl}
+              onChangeText={setImageUrl}
+            />
+            <TouchableOpacity
+              style={styles.uploadMiniBtn}
+              onPress={handlePickImage}
+            >
+              <ThemedText style={styles.uploadMiniText}>
+                📁
+              </ThemedText>
+            </TouchableOpacity>
+          </View>
 
           {/* กล่องพรีวิว (แสดงรูปภาพถ้ามี URL หรือแสดง Avatar สีพาสเทลเมื่อไม่มี URL) */}
           <View style={styles.previewContainer}>
@@ -535,6 +583,56 @@ const styles = StyleSheet.create({
     color: BakeryColors.surface,
     fontWeight: '700',
   },
+
+  imageInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+
+  imageInput: {
+    flex: 1,
+    backgroundColor: BakeryColors.background,
+    borderWidth: 1,
+    borderColor: BakeryColors.border,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: BakeryColors.textPrimary,
+  },
+
+  uploadMiniBtn: {
+    width: 46,
+    height: 46,
+    marginLeft: 8,
+    borderRadius: 14,
+    backgroundColor: '#FFF0F3',
+    borderWidth: 1,
+    borderColor: '#FFD6E0',
+    justifyContent: 'center',
+    alignItems: 'center',
+
+    ...Platform.select({
+      web: {
+        boxShadow: '0px 2px 4px rgba(0,0,0,0.05)',
+      },
+      ios: {
+        shadowColor: '#000',
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        shadowOffset: {
+          width: 0,
+          height: 2,
+        },
+      },
+    }),
+  },
+
+  uploadMiniText: {
+    fontSize: 18,
+  },
+
   previewContainer: {
     marginBottom: 16,
     alignItems: 'center',

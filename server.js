@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const mysql = require('mysql2/promise');
+const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
 
@@ -25,8 +26,30 @@ const dbConfig = {
 
 const pool = mysql.createPool(dbConfig);
 
+const authUsername = process.env.AUTH_USERNAME || 'admin';
+const authPassword = process.env.AUTH_PASSWORD || 'admin123';
+const jwtSecret = process.env.JWT_SECRET || 'inventory-secret';
+
 let dbConnected = false;
 let dbLastError = null;
+
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+
+  if (!token) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  jwt.verify(token, jwtSecret, (err, user) => {
+    if (err) {
+      return res.status(403).json({ error: 'Invalid token' });
+    }
+
+    req.user = user;
+    next();
+  });
+}
 
 async function testMySQL() {
   try {
@@ -71,21 +94,55 @@ function saveProductsToJSON(products) {
   fs.writeFileSync(jsonPath, JSON.stringify(products, null, 2), 'utf-8');
 }
 
+app.post('/api/login', (req, res) => {
+  const { username, password } = req.body || {};
+
+  if (username === authUsername && password === authPassword) {
+    const token = jwt.sign({ username }, jwtSecret, { expiresIn: '8h' });
+    return res.json({ token, username });
+  }
+
+  return res.status(401).json({ error: 'Invalid username or password' });
+});
+
 // 📌 1. GET ALL PRODUCTS
-app.get('/api/products', async (req, res) => {
+app.get('/api/products', authenticateToken, async (req, res) => {
+  const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+
   try {
     if (!dbConnected) {
       const products = getProductsFromJSON();
-      return res.json(products);
+      const filteredProducts = search
+        ? products.filter((product) => {
+            const haystack = `${product.name || ''} ${product.category || ''}`.toLowerCase();
+            return haystack.includes(search.toLowerCase());
+          })
+        : products;
+      return res.json(filteredProducts);
     }
-    
+
+    if (search) {
+      const like = `%${search}%`;
+      const [rows] = await pool.query(
+        'SELECT * FROM products WHERE name LIKE ? OR category LIKE ? ORDER BY id DESC',
+        [like, like]
+      );
+      return res.json(rows);
+    }
+
     const [rows] = await pool.query('SELECT * FROM products ORDER BY id DESC');
     res.json(rows);
   } catch (e) {
     console.error('Products Error:', e.message);
     try {
       const products = getProductsFromJSON();
-      res.json(products);
+      const filteredProducts = search
+        ? products.filter((product) => {
+            const haystack = `${product.name || ''} ${product.category || ''}`.toLowerCase();
+            return haystack.includes(search.toLowerCase());
+          })
+        : products;
+      res.json(filteredProducts);
     } catch {
       res.status(500).json({ error: 'Failed to fetch products' });
     }
@@ -93,7 +150,7 @@ app.get('/api/products', async (req, res) => {
 });
 
 // 📌 2. ADD PRODUCT (POST) - 🟢 เพิ่ม price แล้ว
-app.post('/api/products', async (req, res) => {
+app.post('/api/products', authenticateToken, async (req, res) => {
   const { name, category, price, stock, image } = req.body;
   if (!name || !category) {
     return res.status(400).json({ error: 'name and category are required' });
@@ -127,7 +184,7 @@ app.post('/api/products', async (req, res) => {
 });
 
 // 📌 3. EDIT PRODUCT (PUT) - 🟢 เพิ่ม price แล้ว
-app.put('/api/products/:id', async (req, res) => {
+app.put('/api/products/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
   const { name, category, price, stock, image } = req.body; // 👈 1. เพิ่มรับค่า price
 
@@ -166,7 +223,7 @@ app.put('/api/products/:id', async (req, res) => {
 });
 
 // 📌 4. DELETE PRODUCT (DELETE)
-app.delete('/api/products/:id', async (req, res) => {
+app.delete('/api/products/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
 
   try {

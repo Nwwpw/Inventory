@@ -9,6 +9,7 @@ export type ProductCardProps = {
   inStockText?: string;    // ข้อความสต็อก
   outOfStockText?: string; // ข้อความสินค้าหมด
   onEdit?: (product: any) => void;
+  onDelete?: (product: any) => void;
 };
 
 export function ProductCard({
@@ -17,11 +18,13 @@ export function ProductCard({
   inStockText,
   outOfStockText,
   onEdit,
+  onDelete,
 }: ProductCardProps) {
   const { locale } = useLanguage();
 
   // 🟢 เลือกข้อความตามภาษาปัจจุบันถ้าไม่ได้ส่ง props มา
   const defaultEditText = editText ?? (locale === 'th' ? 'แก้ไข' : 'Edit');
+  const defaultDeleteText = locale === 'th' ? 'ลบ' : 'Delete';
   const defaultInStockText = inStockText ?? (locale === 'th' ? 'คงเหลือ' : 'In Stock');
   const defaultOutOfStockText = outOfStockText ?? (locale === 'th' ? 'สินค้าหมด' : 'Out of Stock');
 
@@ -92,16 +95,31 @@ export function ProductCard({
       </View>
 
       {/* ✏️ ปุ่มแก้ไข */}
-      {onEdit && (
-        <TouchableOpacity 
-          style={styles.editBtn} 
-          onPress={() => onEdit(product)}
-          activeOpacity={0.7}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Text style={styles.editBtnText}>✏️ {defaultEditText}</Text>
-        </TouchableOpacity>
-      )}
+<View>
+  {onEdit && (
+    <TouchableOpacity
+      style={styles.editBtn}
+      onPress={() => onEdit(product)}
+      activeOpacity={0.7}
+    >
+      <Text style={styles.editBtnText}>
+        ✏️ {defaultEditText}
+      </Text>
+    </TouchableOpacity>
+  )}
+
+  {onDelete && (
+    <TouchableOpacity
+      style={styles.deleteBtn}
+      onPress={() => onDelete(product)}
+      activeOpacity={0.7}
+    >
+      <Text style={styles.deleteBtnText}>
+        <Text style={{ color: '#dc2f4c' }}>🗑</Text> {defaultDeleteText}
+      </Text>
+    </TouchableOpacity>
+  )}
+</View>
     </View>
   );
 }
@@ -185,14 +203,28 @@ const styles = StyleSheet.create({
   },
   editBtn: {
     backgroundColor: '#FFF0F3',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: '#FFD6E0',
   },
   editBtnText: {
-    fontSize: 12,
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#E08092',
+  },
+  deleteBtn: {
+    backgroundColor: '#FFF0F3',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#FFD6E0',
+    marginTop: 8,
+  },
+  deleteBtnText: {
+    fontSize: 11,
     fontWeight: '700',
     color: '#E08092',
   },

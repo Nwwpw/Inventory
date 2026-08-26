@@ -15,7 +15,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BakeryColors } from '@/constants/theme';
 import { useLanguage } from '@/context/language-context'; // 🟢 1. Import useLanguage
-import { useProducts } from '@/context/product-context';
+import { PRODUCTS_API_URL, useProducts } from '@/context/product-context';
 
 const translations = {
   en: {
@@ -31,7 +31,10 @@ const translations = {
     home: 'Home',
     add: 'Add',
     menu: 'Menu',
-    settings: 'Settings',
+    settings: 'Settings', 
+    imageUrlOption: 'Image URL',
+    uploadOption: 'Upload Image',
+    deleteConfirm: (name: string) => `Are you sure you want to delete ${name}?`,
   },
   th: {
     eyebrow: 'ร้านเบเกอรี่',
@@ -47,6 +50,9 @@ const translations = {
     add: 'เพิ่ม',
     menu: 'เมนู',
     settings: 'ตั้งค่า',
+    imageUrlOption: 'URL รูปภาพ',
+    uploadOption: 'อัปโหลดรูปภาพ',
+    deleteConfirm: (name: string) => `คุณต้องการลบ ${name} ใช่หรือไม่?`,
   },
 };
 
@@ -157,9 +163,9 @@ export default function HomeScreen() {
             editable={true}
           />
         </View>
-        <TouchableOpacity style={styles.filterButton}>
+        {/*<TouchableOpacity style={styles.filterButton}>
           <ThemedText style={styles.filterIcon}>{t.filter}</ThemedText>
-        </TouchableOpacity>
+        </TouchableOpacity>*/}
       </View>
 
       {/* รายการเบเกอรี่ */}
@@ -179,12 +185,43 @@ export default function HomeScreen() {
           </View>
         }
         renderItem={({ item }) => (
-          <ProductCard 
-            product={item} 
+          <ProductCard
+            product={item}
             editText={t.editBtn}
             inStockText={t.inStock}
             outOfStockText={t.outOfStock}
-            onEdit={(prod) => router.push({ pathname: '/edit', params: { id: prod.id } })} 
+            onEdit={(prod) =>
+              router.push({
+                pathname: '/edit',
+                params: { id: prod.id }
+              })
+            }
+            onDelete={async (prod) => {
+              const confirmDelete = window.confirm(
+                t.deleteConfirm(prod.name)
+              );
+              if (!confirmDelete) return;
+
+              try {
+                const response = await fetch(
+                  `${PRODUCTS_API_URL}/${prod.id}`,
+                  {
+                    method: 'DELETE',
+                  }
+                );
+
+                if (!response.ok) {
+                  throw new Error('Delete failed');
+                }
+
+                alert('Deleted successfully');
+
+                refreshProducts();
+              } catch (error) {
+                console.error(error);
+                alert('Delete failed');
+              }
+            }}
           />
         )}
       />
