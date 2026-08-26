@@ -59,6 +59,9 @@ export function ProductProvider({ children }: { children: ReactNode }) {
       setError(null);
 
       const currentApiUrl = getProductsApiUrl();
+
+      console.log("API URL =", currentApiUrl);
+
       const response = await fetch(currentApiUrl);
 
       if (!response.ok) {

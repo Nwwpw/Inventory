@@ -1,7 +1,13 @@
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-
 import { useLanguage } from '@/context/language-context';
 import { getInitialChar, getPastelColor } from '@/utils/pastel-avatar';
+import {
+  Image,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 export type ProductCardProps = {
   product: any;
@@ -134,12 +140,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#F3E8E8',
+    elevation: 2,
+    ...Platform.select({
+    web: {
+    boxShadow: '0px 2px 8px rgba(0,0,0,0.04)',
+    },
+    ios: {
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {
+    width: 0,
+    height: 2,
+    },
     shadowOpacity: 0.04,
     shadowRadius: 8,
-    elevation: 2,
-  },
+    },
+    }),
+    },
   image: {
     width: 64,
     height: 64,
