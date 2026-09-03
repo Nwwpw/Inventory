@@ -223,10 +223,14 @@ export default function AddProductScreen({ product, onSuccess, onCancel }: AddPr
 
       const method = isEditMode ? 'PUT' : 'POST';
 
+      // 🟢 1. ดึง Token เพื่อเตรียมส่งยืนยันตัวตน
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+
       const response = await fetch(targetUrl, {
         method,
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`, // 👈 2. เพิ่ม Authorization Header เพื่อแก้ Error 401
         },
         body: JSON.stringify({
           name: name.trim(),
@@ -289,22 +293,22 @@ export default function AddProductScreen({ product, onSuccess, onCancel }: AddPr
     }
   };
 
-      const handlePickImage = async () => {
-      try {
-        const result = await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ImagePicker.MediaTypeOptions.Images,
-          allowsEditing: true,
-          quality: 0.8,
-        });
+  const handlePickImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 0.8,
+      });
 
-        if (!result.canceled) {
-          setImageUrl(result.assets[0].uri);
-        }
-      } catch (error) {
-        console.error(error);
-        Alert.alert('Error', 'Cannot select image');
+      if (!result.canceled) {
+        setImageUrl(result.assets[0].uri);
       }
-    };
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Error', 'Cannot select image');
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -381,7 +385,7 @@ export default function AddProductScreen({ product, onSuccess, onCancel }: AddPr
             onChangeText={(text) => {
               const cleaned = text.replace(/[^0-9]/g, '');
               setPrice(cleaned);
-              }}
+            }}
           />
 
           <ThemedText style={styles.label}>{t.stockLabel}</ThemedText>
@@ -394,7 +398,7 @@ export default function AddProductScreen({ product, onSuccess, onCancel }: AddPr
             onChangeText={(text) => {
               const cleaned = text.replace(/[^0-9]/g, '');
               setStock(cleaned);
-              }}
+            }}
           />
           <ThemedText style={styles.label}>
             {t.imageLabel}

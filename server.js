@@ -35,20 +35,37 @@ let dbLastError = null;
 
 function authenticateToken(req, res, next) {
   const authHeader = req.headers.authorization;
-  const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  const token =
+    authHeader && authHeader.startsWith('Bearer ')
+      ? authHeader.slice(7)
+      : null;
 
   if (!token) {
-    return res.status(401).json({ error: 'Unauthorized' });
+    return res.status(401).json({
+      error: 'Unauthorized'
+    });
   }
 
   jwt.verify(token, jwtSecret, (err, user) => {
     if (err) {
-      return res.status(403).json({ error: 'Invalid token' });
+      return res.status(403).json({
+        error: 'Invalid token'
+      });
     }
 
     req.user = user;
     next();
   });
+}
+
+function requireAdmin(req, res, next) {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({
+      error: 'Admin only'
+    });
+  }
+
+  next();
 }
 
 async function testMySQL() {
@@ -94,15 +111,57 @@ function saveProductsToJSON(products) {
   fs.writeFileSync(jsonPath, JSON.stringify(products, null, 2), 'utf-8');
 }
 
-app.post('/api/login', (req, res) => {
+app.post('/api/login', async (req, res) => {
   const { username, password } = req.body || {};
 
-  if (username === authUsername && password === authPassword) {
-    const token = jwt.sign({ username }, jwtSecret, { expiresIn: '8h' });
-    return res.json({ token, username });
-  }
+  try {
+    const [rows] = await pool.query(
+      'SELECT * FROM users WHERE username = ?',
+      [username]
+    );
 
-  return res.status(401).json({ error: 'Invalid username or password' });
+    if (rows.length === 0) {
+      return res.status(401).json({
+        error: 'Invalid username or password'
+      });
+    }
+
+    const user = rows[0];
+
+    if (user.password !== password) {
+      return res.status(401).json({
+        error: 'Invalid username or password'
+      });
+    }
+
+    const token = jwt.sign(
+      {
+        id: user.id,
+        username: user.username,
+        role: user.role
+      },
+      jwtSecret,
+      {
+        expiresIn: '8h'
+      }
+    );
+
+    console.log('USER DATA =', user);
+
+    return res.json({
+      token,
+      userId: user.id,
+      username: user.username,
+      email: user.email,
+      role: user.role
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      error: 'Login failed'
+    });
+  }
 });
 
 // 📌 1. GET ALL PRODUCTS
@@ -149,8 +208,8 @@ app.get('/api/products', authenticateToken, async (req, res) => {
   }
 });
 
-// 📌 2. ADD PRODUCT (POST) - 🟢 เพิ่ม price แล้ว
-app.post('/api/products', authenticateToken, async (req, res) => {
+// 📌 2. ADD PRODUCT (POST)
+app.post('/api/products', authenticateToken, requireAdmin, async (req, res) => {
   const { name, category, price, stock, image } = req.body;
   if (!name || !category) {
     return res.status(400).json({ error: 'name and category are required' });
@@ -163,7 +222,7 @@ app.post('/api/products', authenticateToken, async (req, res) => {
         id: Date.now(),
         name,
         category,
-        price: Number(price) || 0, // 👈 เพิ่ม price
+        price: Number(price) || 0,
         stock: Number(stock) || 0,
         image: image || null
       };
@@ -174,7 +233,7 @@ app.post('/api/products', authenticateToken, async (req, res) => {
 
     const [result] = await pool.query(
       'INSERT INTO products (name, category, price, stock, image) VALUES (?, ?, ?, ?, ?)',
-      [name, category, Number(price) || 0, Number(stock) || 0, image || null] // 👈 เพิ่ม price
+      [name, category, Number(price) || 0, Number(stock) || 0, image || null]
     );
     res.status(201).json({ id: result.insertId, name, category, price: Number(price) || 0, stock, image });
   } catch (e) {
@@ -183,10 +242,10 @@ app.post('/api/products', authenticateToken, async (req, res) => {
   }
 });
 
-// 📌 3. EDIT PRODUCT (PUT) - 🟢 เพิ่ม price แล้ว
-app.put('/api/products/:id', authenticateToken, async (req, res) => {
+// 📌 3. EDIT PRODUCT (PUT)
+app.put('/api/products/:id', authenticateToken, requireAdmin, async (req, res) => {
   const { id } = req.params;
-  const { name, category, price, stock, image } = req.body; // 👈 1. เพิ่มรับค่า price
+  const { name, category, price, stock, image } = req.body;
 
   try {
     if (!dbConnected) {
@@ -198,7 +257,7 @@ app.put('/api/products/:id', authenticateToken, async (req, res) => {
           ...products[index],
           ...(name && { name }),
           ...(category && { category }),
-          ...(price !== undefined && { price: Number(price) }), // 👈 2. อัปเดต price ใน JSON
+          ...(price !== undefined && { price: Number(price) }),
           ...(stock !== undefined && { stock: Number(stock) }),
           ...(image !== undefined && { image })
         };
@@ -210,7 +269,6 @@ app.put('/api/products/:id', authenticateToken, async (req, res) => {
       }
     }
 
-    // 👈 3. อัปเดต price ใน SQL Query
     await pool.query(
       'UPDATE products SET name = ?, category = ?, price = ?, stock = ?, image = ? WHERE id = ?',
       [name, category, Number(price) || 0, stock, image, id]
@@ -223,7 +281,7 @@ app.put('/api/products/:id', authenticateToken, async (req, res) => {
 });
 
 // 📌 4. DELETE PRODUCT (DELETE)
-app.delete('/api/products/:id', authenticateToken, async (req, res) => {
+app.delete('/api/products/:id', authenticateToken, requireAdmin, async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -253,6 +311,214 @@ app.get('/api/status', async (req, res) => {
 
 app.get('/api', (req, res) => {
   res.send('API is running');
+});
+
+app.post('/api/register', async (req, res) => {
+  console.log('REGISTER API VERSION 2');
+  const {
+    username,
+    email,
+    password,
+    profile_image
+  } = req.body;
+
+  try {
+    const [existingUser] = await pool.query(
+      'SELECT * FROM users WHERE username = ?',
+      [username]
+    );
+
+    if (existingUser.length > 0) {
+      return res.status(400).json({
+        error: 'Username already exists'
+      });
+    }
+
+    const [existingEmail] = await pool.query(
+      'SELECT * FROM users WHERE email = ?',
+      [email]
+    );
+
+    if (existingEmail.length > 0) {
+      return res.status(400).json({
+        error: 'Email already exists'
+      });
+    }
+
+    const [result] = await pool.query(
+      `
+      INSERT INTO users
+      (
+        username,
+        email,
+        password,
+        role,
+        profile_image
+      )
+      VALUES
+      (
+        ?,
+        ?,
+        ?,
+        'staff',
+        ?
+      )
+      `,
+      [
+        username,
+        email,
+        password,
+        profile_image || null
+      ]
+    );
+
+    res.status(201).json({
+      id: result.insertId,
+      username,
+      email
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      error: 'Register failed'
+    });
+  }
+});
+
+// 🟢 แก้ไขตรงนี้แล้ว (ตัด phone ออกจาก SQL)
+app.get('/api/profile/:id', authenticateToken, async (req, res) => {
+  console.log('PROFILE REQUEST ID =', req.params.id);
+  try {
+    const [rows] = await pool.query(
+      `
+      SELECT
+      id,
+      username,
+      email,
+      role,
+      profile_image
+      FROM users
+      WHERE id = ?
+      `,
+      [req.params.id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({
+        error: 'User not found'
+      });
+    }
+    
+    console.log('PROFILE DATA =', rows[0]);
+    res.json(rows[0]);
+
+  } catch (err) {
+      console.error('PROFILE ERROR =', err);
+      res.status(500).json({
+        error: err.message
+      });
+    }
+});
+
+// 🟢 แก้ไขตรงนี้ด้วย (ตัด phone ออกจาก SQL UPDATE)
+app.put('/api/profile/:id', authenticateToken, async (req, res) => {
+  const {
+    user_name,
+    email,
+    password
+  } = req.body;
+
+  try {
+    await pool.query(
+    `
+    UPDATE users
+    SET
+    username = ?,
+    email = ?,
+    password = ?
+    WHERE id = ?
+    `,
+    [
+      user_name,
+      email,
+      password,
+      req.params.id
+    ]
+  );
+
+    res.json({
+      success: true
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      error: 'Failed to update profile'
+    });
+  }
+});
+
+app.put('/api/profile/:id/image', authenticateToken, async (req, res) => {
+  const { user_img } = req.body;
+
+  try {
+    console.log('UPDATE PROFILE BODY =', req.body);
+    await pool.query(
+      `
+      UPDATE users
+      SET profile_image = ?
+      WHERE id = ?
+      `,
+      [
+        user_img,
+        req.params.id
+      ]
+    );
+
+    res.json({
+      success: true
+    });
+
+  } catch (err) {
+    console.error('IMAGE ERROR =', err);
+    res.status(500).json({
+      error: err.message
+    });
+  }
+});
+
+app.post('/api/verify-password', authenticateToken, async (req, res) => {
+  const { password } = req.body;
+
+  try {
+    const [rows] = await pool.query(
+      'SELECT password FROM users WHERE id = ?',
+      [req.user.id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({
+        error: 'User not found'
+      });
+    }
+
+    if (rows[0].password !== password) {
+      return res.status(401).json({
+        error: 'Password incorrect'
+      });
+    }
+
+    return res.json({
+      success: true
+    });
+
+  } catch (err) {
+    console.error('VERIFY PASSWORD ERROR =', err);
+    return res.status(500).json({
+      error: 'Verify failed'
+    });
+  }
 });
 
 app.listen(port, '0.0.0.0', () => {

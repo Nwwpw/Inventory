@@ -1,14 +1,13 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 
 const REMOTE_API_URL = 'http://119.59.102.161:3041/api/products';
-const LOCAL_API_URL = 'http://localhost:3041/api/products';
 
 export function getProductsApiUrl() {
   if (typeof window !== 'undefined' && window.location?.hostname) {
     const hostname = window.location.hostname;
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      // Local web app should use the remote course backend when the SSH tunnel is not available.
       return REMOTE_API_URL;
     }
     return `http://${hostname}:3041/api/products`;
@@ -37,12 +36,14 @@ export interface Product {
   imageUrl?: string;
 }
 
+// 🟢 เพิ่ม deleteProduct เข้าไปใน Context Type
 interface ProductContextType {
   products: Product[];
   loading: boolean;
   isLoading: boolean;
   error: string | null;
   refreshProducts: () => Promise<void>;
+  deleteProduct: (id: string) => Promise<void>; // <-- ฟังก์ชันลบสินค้า
 }
 
 const ProductContext = createContext<ProductContextType | undefined>(undefined);
@@ -52,17 +53,35 @@ export function ProductProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // 🟢 ดึงข้อมูลสินค้า และ Map Data ให้อยู่ใน Format ที่พร้อมใช้
+  // 🟢 Helper Function สำหรับดึง Token แบบรองรับทั้ง Web และ Mobile
+  const getToken = async (): Promise<string | null> => {
+    if (Platform.OS === 'web') {
+      return typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    }
+    return await AsyncStorage.getItem('token');
+  };
+
+  // 🟢 ฟังก์ชันดึงข้อมูลสินค้าทั้งหมด
   const fetchProducts = useCallback(async () => {
+    const currentApiUrl = getProductsApiUrl();
+
     try {
       setLoading(true);
       setError(null);
 
-      const currentApiUrl = getProductsApiUrl();
+      // ดึง Token
+      const token = await getToken();
 
-      console.log("API URL =", currentApiUrl);
+      // กำหนด Header
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
 
-      const response = await fetch(currentApiUrl);
+      if (token && token !== 'null' && token !== 'undefined') {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(currentApiUrl, { method: 'GET', headers });
 
       if (!response.ok) {
         throw new Error(`HTTP Error Status: ${response.status}`);
@@ -102,7 +121,47 @@ export function ProductProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // 🟢 ปรับเปลี่ยนการเช็ก Mount ให้รองรับทั้ง Web, iOS และ Android
+  // 🟢 ฟังก์ชันสั่งลบสินค้า (เพิ่มใหม่เพื่อแก้ปัญหา 401 Unauthorized)
+  const deleteProduct = useCallback(async (id: string) => {
+    const currentApiUrl = getProductsApiUrl();
+
+    try {
+      setLoading(true);
+
+      // 1. ดึง Token ล่าสุดมาใช้งาน
+      const token = await getToken();
+
+      // 2. ตั้งค่า Header และแนบ Bearer Token (สำคัญมาก ป้องกัน 401)
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token && token !== 'null' && token !== 'undefined') {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      // 3. ยิง Request Method DELETE ไปยัง API ปลายทางตาม ID สินค้า
+      const response = await fetch(`${currentApiUrl}/${id}`, {
+        method: 'DELETE',
+        headers: headers,
+      });
+
+      // หาก Response ตอบกลับมาไม่โอเค (เช่น 401 หรือ 403) ให้สั่ง Throw Error
+      if (!response.ok) {
+        throw new Error(`Delete Failed: Status ${response.status}`);
+      }
+
+      // 4. ลบสำเร็จแล้ว ให้ทำการโหลดรายการสินค้าใหม่ทันที
+      await fetchProducts();
+    } catch (err: any) {
+      console.error('Delete Product Error:', err);
+      setError(err.message || 'Failed to delete product');
+      throw err; // โยน Error ออกไปให้ UI ฝั่งปุ่มกดดักแสดง Alert ต่อได้
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchProducts]);
+
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
@@ -115,6 +174,7 @@ export function ProductProvider({ children }: { children: ReactNode }) {
         isLoading: loading,
         error,
         refreshProducts: fetchProducts,
+        deleteProduct, // <-- ส่งฟังก์ชันลบออกไปให้หน้ารายการสินค้าใช้
       }}
     >
       {children}

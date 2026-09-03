@@ -27,6 +27,10 @@ export function ProductCard({
   onDelete,
 }: ProductCardProps) {
   const { locale } = useLanguage();
+  const role =
+  typeof window !== 'undefined'
+    ? localStorage.getItem('role')
+    : '';
 
   // 🟢 เลือกข้อความตามภาษาปัจจุบันถ้าไม่ได้ส่ง props มา
   const defaultEditText = editText ?? (locale === 'th' ? 'แก้ไข' : 'Edit');
@@ -43,8 +47,14 @@ export function ProductCard({
     ? (product?.categoryTh || product?.category || 'เบเกอรี่')
     : (product?.categoryEn || product?.category || 'BAKERY');
 
-  // 🟢 ดึงรูปภาพรองรับหลายชื่อคีย์
+  // 🟢 ดึง URL รูปภาพ รองรับหลายชื่อฟิลด์
   const imageUrl = product?.image || product?.imageUrl;
+  // 🟢 ป้องกัน blob URL ที่หมดอายุบน Web
+  const isValidImage =
+    imageUrl &&
+    typeof imageUrl === 'string' &&
+    !imageUrl.startsWith('blob:');
+
 
   // 🟢 ดึงค่าจำนวนสต็อก
   const stockCount = product?.stock ?? product?.quantity ?? 0;
@@ -65,7 +75,7 @@ export function ProductCard({
   return (
     <View style={styles.card}>
       {/* 🖼️ รูปภาพสินค้า หรือ Avatar พาสเทล */}
-      {imageUrl && imageUrl.trim().length > 0 ? (
+      {isValidImage ? (
         <Image 
           source={{ uri: imageUrl }} 
           style={styles.image} 
@@ -102,7 +112,7 @@ export function ProductCard({
 
       {/* ✏️ ปุ่มแก้ไข */}
 <View>
-  {onEdit && (
+  {role === 'admin' && onEdit && (
     <TouchableOpacity
       style={styles.editBtn}
       onPress={() => onEdit(product)}
@@ -114,7 +124,7 @@ export function ProductCard({
     </TouchableOpacity>
   )}
 
-  {onDelete && (
+  {role === 'admin' && onDelete && (
     <TouchableOpacity
       style={styles.deleteBtn}
       onPress={() => onDelete(product)}
