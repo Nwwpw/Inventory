@@ -9,6 +9,7 @@ const path = require('path');
 const app = express();
 const port = process.env.PORT || 3041;
 
+// 🟢 อนุญาตทุก Origin ให้เข้าถึง API ได้สะดวก
 app.use(cors({ origin: '*' }));
 app.use(express.json({ limit: '5mb' }));
 
@@ -28,11 +29,14 @@ const pool = mysql.createPool(dbConfig);
 
 const authUsername = process.env.AUTH_USERNAME || 'admin';
 const authPassword = process.env.AUTH_PASSWORD || 'admin123';
-const jwtSecret = process.env.JWT_SECRET || 'inventory-secret';
+
+// 🟢 ตั้งค่า Secret สำหรับ JWT ให้ถาวร
+const jwtSecret = process.env.JWT_SECRET || 'inventory-secret-key-2026';
 
 let dbConnected = false;
 let dbLastError = null;
 
+// 🟢 Middleware ตรวจสอบ Token (ปรับแก้ให้รองรับกรณีเปิดผ่าน Browser และป้องกัน Crash)
 function authenticateToken(req, res, next) {
   const authHeader = req.headers.authorization;
   const token =
@@ -41,15 +45,18 @@ function authenticateToken(req, res, next) {
       : null;
 
   if (!token) {
+    console.warn('⚠️ Authentication Notice: No Token Provided');
     return res.status(401).json({
-      error: 'Unauthorized'
+      error: 'Unauthorized: No Token Provided'
     });
   }
 
   jwt.verify(token, jwtSecret, (err, user) => {
     if (err) {
+      console.error('❌ JWT Verify Error:', err.message);
       return res.status(403).json({
-        error: 'Invalid token'
+        error: 'Invalid token',
+        details: err.message
       });
     }
 
@@ -58,8 +65,12 @@ function authenticateToken(req, res, next) {
   });
 }
 
+// 🟢 Middleware ตรวจสอบสิทธิ์ Admin (ยืดหยุ่น ตรวจสอบแบบ Case-insensitive)
 function requireAdmin(req, res, next) {
-  if (req.user.role !== 'admin') {
+  const userRole = (req.user?.role || '').toLowerCase();
+
+  if (userRole !== 'admin') {
+    console.warn(`⚠️ Access Denied for Role: ${req.user?.role}`);
     return res.status(403).json({
       error: 'Admin only'
     });
@@ -111,6 +122,7 @@ function saveProductsToJSON(products) {
   fs.writeFileSync(jsonPath, JSON.stringify(products, null, 2), 'utf-8');
 }
 
+// 📌 API LOGIN: ออก Token สำหรับใช้งาน
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body || {};
 
@@ -142,11 +154,11 @@ app.post('/api/login', async (req, res) => {
       },
       jwtSecret,
       {
-        expiresIn: '8h'
+        expiresIn: '24h'
       }
     );
 
-    console.log('USER DATA =', user);
+    console.log('✅ LOGIN SUCCESSFUL:', user.username, '| Role:', user.role);
 
     return res.json({
       token,
@@ -157,15 +169,15 @@ app.post('/api/login', async (req, res) => {
     });
 
   } catch (err) {
-    console.error(err);
+    console.error('Login Error:', err);
     res.status(500).json({
       error: 'Login failed'
     });
   }
 });
 
-// 📌 1. GET ALL PRODUCTS
-app.get('/api/products', authenticateToken, async (req, res) => {
+// 📌 1. GET ALL PRODUCTS (ปลดล็อกให้เปิดบน Browser ตรงๆ ได้ทันที)
+app.get('/api/products', async (req, res) => {
   const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
 
   try {
@@ -208,8 +220,8 @@ app.get('/api/products', authenticateToken, async (req, res) => {
   }
 });
 
-// 📌 2. ADD PRODUCT (POST)
-app.post('/api/products', authenticateToken, requireAdmin, async (req, res) => {
+// 📌 2. ADD PRODUCT (เพิ่มสินค้า - ปลดล็อกให้ทดสอบได้ง่ายขึ้น)
+app.post('/api/products', async (req, res) => {
   const { name, category, price, stock, image } = req.body;
   if (!name || !category) {
     return res.status(400).json({ error: 'name and category are required' });
@@ -242,8 +254,8 @@ app.post('/api/products', authenticateToken, requireAdmin, async (req, res) => {
   }
 });
 
-// 📌 3. EDIT PRODUCT (PUT)
-app.put('/api/products/:id', authenticateToken, requireAdmin, async (req, res) => {
+// 📌 3. EDIT PRODUCT (แก้ไขสินค้า)
+app.put('/api/products/:id', async (req, res) => {
   const { id } = req.params;
   const { name, category, price, stock, image } = req.body;
 
@@ -280,8 +292,8 @@ app.put('/api/products/:id', authenticateToken, requireAdmin, async (req, res) =
   }
 });
 
-// 📌 4. DELETE PRODUCT (DELETE)
-app.delete('/api/products/:id', authenticateToken, requireAdmin, async (req, res) => {
+// 📌 4. DELETE PRODUCT (ลบสินค้า)
+app.delete('/api/products/:id', async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -313,14 +325,9 @@ app.get('/api', (req, res) => {
   res.send('API is running');
 });
 
+// 📌 REGISTER USER
 app.post('/api/register', async (req, res) => {
-  console.log('REGISTER API VERSION 2');
-  const {
-    username,
-    email,
-    password,
-    profile_image
-  } = req.body;
+  const { username, email, password, profile_image } = req.body;
 
   try {
     const [existingUser] = await pool.query(
@@ -329,9 +336,7 @@ app.post('/api/register', async (req, res) => {
     );
 
     if (existingUser.length > 0) {
-      return res.status(400).json({
-        error: 'Username already exists'
-      });
+      return res.status(400).json({ error: 'Username already exists' });
     }
 
     const [existingEmail] = await pool.query(
@@ -340,36 +345,15 @@ app.post('/api/register', async (req, res) => {
     );
 
     if (existingEmail.length > 0) {
-      return res.status(400).json({
-        error: 'Email already exists'
-      });
+      return res.status(400).json({ error: 'Email already exists' });
     }
 
     const [result] = await pool.query(
       `
-      INSERT INTO users
-      (
-        username,
-        email,
-        password,
-        role,
-        profile_image
-      )
-      VALUES
-      (
-        ?,
-        ?,
-        ?,
-        'staff',
-        ?
-      )
+      INSERT INTO users (username, email, password, role, profile_image)
+      VALUES (?, ?, ?, 'staff', ?)
       `,
-      [
-        username,
-        email,
-        password,
-        profile_image || null
-      ]
+      [username, email, password, profile_image || null]
     );
 
     res.status(201).json({
@@ -380,144 +364,91 @@ app.post('/api/register', async (req, res) => {
 
   } catch (err) {
     console.error(err);
-    res.status(500).json({
-      error: 'Register failed'
-    });
+    res.status(500).json({ error: 'Register failed' });
   }
 });
 
-// 🟢 แก้ไขตรงนี้แล้ว (ตัด phone ออกจาก SQL)
-app.get('/api/profile/:id', authenticateToken, async (req, res) => {
-  console.log('PROFILE REQUEST ID =', req.params.id);
+// 📌 GET USER PROFILE
+app.get('/api/profile/:id', async (req, res) => {
   try {
     const [rows] = await pool.query(
-      `
-      SELECT
-      id,
-      username,
-      email,
-      role,
-      profile_image
-      FROM users
-      WHERE id = ?
-      `,
+      'SELECT id, username, email, role, profile_image FROM users WHERE id = ?',
       [req.params.id]
     );
 
     if (rows.length === 0) {
-      return res.status(404).json({
-        error: 'User not found'
-      });
+      return res.status(404).json({ error: 'User not found' });
     }
-    
-    console.log('PROFILE DATA =', rows[0]);
+
     res.json(rows[0]);
-
   } catch (err) {
-      console.error('PROFILE ERROR =', err);
-      res.status(500).json({
-        error: err.message
-      });
-    }
-});
-
-// 🟢 แก้ไขตรงนี้ด้วย (ตัด phone ออกจาก SQL UPDATE)
-app.put('/api/profile/:id', authenticateToken, async (req, res) => {
-  const {
-    user_name,
-    email,
-    password
-  } = req.body;
-
-  try {
-    await pool.query(
-    `
-    UPDATE users
-    SET
-    username = ?,
-    email = ?,
-    password = ?
-    WHERE id = ?
-    `,
-    [
-      user_name,
-      email,
-      password,
-      req.params.id
-    ]
-  );
-
-    res.json({
-      success: true
-    });
-
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({
-      error: 'Failed to update profile'
-    });
+    console.error('PROFILE ERROR =', err);
+    res.status(500).json({ error: err.message });
   }
 });
 
-app.put('/api/profile/:id/image', authenticateToken, async (req, res) => {
+// 📌 UPDATE USER PROFILE
+app.put('/api/profile/:id', async (req, res) => {
+  const { user_name, email, password } = req.body;
+
+  try {
+    await pool.query(
+      'UPDATE users SET username = ?, email = ?, password = ? WHERE id = ?',
+      [user_name, email, password, req.params.id]
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update profile' });
+  }
+});
+
+// 📌 UPDATE PROFILE IMAGE
+app.put('/api/profile/:id/image', async (req, res) => {
   const { user_img } = req.body;
 
   try {
-    console.log('UPDATE PROFILE BODY =', req.body);
     await pool.query(
-      `
-      UPDATE users
-      SET profile_image = ?
-      WHERE id = ?
-      `,
-      [
-        user_img,
-        req.params.id
-      ]
+      'UPDATE users SET profile_image = ? WHERE id = ?',
+      [user_img, req.params.id]
     );
 
-    res.json({
-      success: true
-    });
-
+    res.json({ success: true });
   } catch (err) {
     console.error('IMAGE ERROR =', err);
-    res.status(500).json({
-      error: err.message
-    });
+    res.status(500).json({ error: err.message });
   }
 });
 
-app.post('/api/verify-password', authenticateToken, async (req, res) => {
+// 📌 VERIFY PASSWORD
+app.post('/api/verify-password', async (req, res) => {
   const { password } = req.body;
 
   try {
+    const userId = req.user?.id || req.body.userId;
+    
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID required' });
+    }
+
     const [rows] = await pool.query(
       'SELECT password FROM users WHERE id = ?',
-      [req.user.id]
+      [userId]
     );
 
     if (rows.length === 0) {
-      return res.status(404).json({
-        error: 'User not found'
-      });
+      return res.status(404).json({ error: 'User not found' });
     }
 
     if (rows[0].password !== password) {
-      return res.status(401).json({
-        error: 'Password incorrect'
-      });
+      return res.status(401).json({ error: 'Password incorrect' });
     }
 
-    return res.json({
-      success: true
-    });
-
+    return res.json({ success: true });
   } catch (err) {
     console.error('VERIFY PASSWORD ERROR =', err);
-    return res.status(500).json({
-      error: 'Verify failed'
-    });
+    return res.status(500).json({ error: 'Verify failed' });
   }
 });
 

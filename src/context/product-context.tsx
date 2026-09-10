@@ -10,7 +10,7 @@ export function getProductsApiUrl() {
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
       return REMOTE_API_URL;
     }
-    return `http://${hostname}:3041/api/products`;
+    return `http://119.59.102.161:3041/api/products`;
   }
 
   if (Platform.OS === 'android') {
@@ -36,14 +36,13 @@ export interface Product {
   imageUrl?: string;
 }
 
-// 🟢 เพิ่ม deleteProduct เข้าไปใน Context Type
 interface ProductContextType {
   products: Product[];
   loading: boolean;
   isLoading: boolean;
   error: string | null;
   refreshProducts: () => Promise<void>;
-  deleteProduct: (id: string) => Promise<void>; // <-- ฟังก์ชันลบสินค้า
+  deleteProduct: (id: string) => Promise<void>;
 }
 
 const ProductContext = createContext<ProductContextType | undefined>(undefined);
@@ -53,12 +52,30 @@ export function ProductProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // 🟢 Helper Function สำหรับดึง Token แบบรองรับทั้ง Web และ Mobile
+  // 🟢 Helper Function ดึง Token (ตัดช่องว่าง trim และรองรับ fallback เผื่อชื่อ key อื่น)
   const getToken = async (): Promise<string | null> => {
-    if (Platform.OS === 'web') {
-      return typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    try {
+      let rawToken: string | null = null;
+
+      if (Platform.OS === 'web') {
+        if (typeof window !== 'undefined') {
+          // ดึงจาก 'token' หากไม่มีจะลองดึงจาก key สำรอง
+          rawToken = localStorage.getItem('token') || localStorage.getItem('userToken');
+        }
+      } else {
+        rawToken = (await AsyncStorage.getItem('token')) || (await AsyncStorage.getItem('userToken'));
+      }
+
+      // หากได้ค่าที่ไม่ถูกต้อง หรือเป็น string คำว่า "null"/"undefined" ให้ส่งกลับ null
+      if (!rawToken || rawToken === 'null' || rawToken === 'undefined') {
+        return null;
+      }
+
+      return rawToken.trim();
+    } catch (e) {
+      console.error('Error getting token:', e);
+      return null;
     }
-    return await AsyncStorage.getItem('token');
   };
 
   // 🟢 ฟังก์ชันดึงข้อมูลสินค้าทั้งหมด
@@ -69,17 +86,23 @@ export function ProductProvider({ children }: { children: ReactNode }) {
       setLoading(true);
       setError(null);
 
-      // ดึง Token
+      // ดึง Token ล่าสุด
       const token = await getToken();
 
-      // กำหนด Header
+      // ⚠️ หากไม่มี Token ให้ข้ามการยิง Request เพื่อไม่ให้ติด 403 / 401 ใน Console
+      if (!token) {
+        console.warn('Fetch Products skipped: No valid token found in storage.');
+        setError('Unauthorized: Token missing');
+        setProducts([]);
+        setLoading(false);
+        return;
+      }
+
+      // กำหนด Header และแนบ Bearer Token
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`, // แนบ Token อย่างชัดเจน
       };
-
-      if (token && token !== 'null' && token !== 'undefined') {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
 
       const response = await fetch(currentApiUrl, { method: 'GET', headers });
 
@@ -121,7 +144,7 @@ export function ProductProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // 🟢 ฟังก์ชันสั่งลบสินค้า (เพิ่มใหม่เพื่อแก้ปัญหา 401 Unauthorized)
+  // 🟢 ฟังก์ชันสั่งลบสินค้า
   const deleteProduct = useCallback(async (id: string) => {
     const currentApiUrl = getProductsApiUrl();
 
@@ -131,32 +154,32 @@ export function ProductProvider({ children }: { children: ReactNode }) {
       // 1. ดึง Token ล่าสุดมาใช้งาน
       const token = await getToken();
 
-      // 2. ตั้งค่า Header และแนบ Bearer Token (สำคัญมาก ป้องกัน 401)
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
-
-      if (token && token !== 'null' && token !== 'undefined') {
-        headers['Authorization'] = `Bearer ${token}`;
+      if (!token) {
+        throw new Error('Unauthorized: Please login first');
       }
 
-      // 3. ยิง Request Method DELETE ไปยัง API ปลายทางตาม ID สินค้า
+      // 2. ตั้งค่า Header และแนบ Bearer Token
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      };
+
+      // 3. ยิง Request Method DELETE
       const response = await fetch(`${currentApiUrl}/${id}`, {
         method: 'DELETE',
         headers: headers,
       });
 
-      // หาก Response ตอบกลับมาไม่โอเค (เช่น 401 หรือ 403) ให้สั่ง Throw Error
       if (!response.ok) {
         throw new Error(`Delete Failed: Status ${response.status}`);
       }
 
-      // 4. ลบสำเร็จแล้ว ให้ทำการโหลดรายการสินค้าใหม่ทันที
+      // 4. ลบสำเร็จแล้วทำการดึงข้อมูลใหม่
       await fetchProducts();
     } catch (err: any) {
       console.error('Delete Product Error:', err);
       setError(err.message || 'Failed to delete product');
-      throw err; // โยน Error ออกไปให้ UI ฝั่งปุ่มกดดักแสดง Alert ต่อได้
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -174,7 +197,7 @@ export function ProductProvider({ children }: { children: ReactNode }) {
         isLoading: loading,
         error,
         refreshProducts: fetchProducts,
-        deleteProduct, // <-- ส่งฟังก์ชันลบออกไปให้หน้ารายการสินค้าใช้
+        deleteProduct,
       }}
     >
       {children}
